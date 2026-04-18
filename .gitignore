@@ -1,0 +1,16 @@
+# Dependencies
+node_modules/
+agrigrow-backend/node_modules/
+
+# Environment
+.env
+agrigrow-backend/.env
+
+# Database (SQLite file — do not commit)
+agrigrow-backend/db/*.db
+agrigrow-backend/db/*.db-wal
+agrigrow-backend/db/*.db-shm
+
+# OS
+.DS_Store
+Thumbs.db

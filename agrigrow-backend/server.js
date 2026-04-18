@@ -37,18 +37,26 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Internal server error.' });
 });
 
-// ── Start ──────────────────────────────────────────────────────────────────────
+// ── Start / Export ─────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 5000;
 
-initDb().then(() => {
-  app.listen(PORT, () => {
-    console.log('');
-    console.log('🌱 AgriGrow Backend running!');
-    console.log(`   API:    http://localhost:${PORT}/api/health`);
-    console.log(`   App:    http://localhost:${PORT}/AgriGrow.html`);
-    console.log('');
+// Vercel imports this file as a serverless function — just export the app.
+// Local dev: initialise the DB and start listening.
+if (process.env.VERCEL) {
+  // On Vercel, initialise DB eagerly then export
+  initDb().catch(err => console.error('DB init error:', err));
+  module.exports = app;
+} else {
+  initDb().then(() => {
+    app.listen(PORT, () => {
+      console.log('');
+      console.log('🌱 AgriGrow Backend running!');
+      console.log(`   API:    http://localhost:${PORT}/api/health`);
+      console.log(`   App:    http://localhost:${PORT}/AgriGrow.html`);
+      console.log('');
+    });
+  }).catch(err => {
+    console.error('Failed to initialize database:', err);
+    process.exit(1);
   });
-}).catch(err => {
-  console.error('Failed to initialize database:', err);
-  process.exit(1);
-});
+}
