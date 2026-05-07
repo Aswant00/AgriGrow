@@ -1,16 +1,37 @@
-# Dependencies
+# ─── Node / old backend ───────────────────────────────────────────────────────
 node_modules/
-agrigrow-backend/node_modules/
+agrigrow-backend/
+package-lock.json
+package.json
+vercel.json
 
-# Environment
+# ─── Environment secrets (NEVER commit these) ────────────────────────────────
 .env
-agrigrow-backend/.env
+flask-backend/.env
 
-# Database (SQLite file — do not commit)
-agrigrow-backend/db/*.db
-agrigrow-backend/db/*.db-wal
-agrigrow-backend/db/*.db-shm
+# ─── Python ──────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
 
-# OS
+# ─── Virtual environments ────────────────────────────────────────────────────
+venv/
+env/
+.venv/
+.env/
+
+# ─── IDE / OS ─────────────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
+.vscode/
+.idea/
+
+# ─── Logs ────────────────────────────────────────────────────────────────────
+*.log

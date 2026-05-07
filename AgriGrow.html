@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
+ser<head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AgriGrow – Sustainable Farming</title>
@@ -57,7 +57,19 @@
     .fg label { display: block; font-size: 13px; font-weight: 600; color: #444; margin-bottom: 5px; }
     .fg input, .fg select, .fg textarea { width: 100%; padding: 11px 13px; border: 1px solid #ccc; border-radius: 8px; font-size: 14px; outline: none; background: #fff; font-family: inherit; }
     .fg input:focus, .fg select:focus, .fg textarea:focus { border-color: #2e7d32; }
+    .fg input.input-error { border-color: #e53935 !important; background: #fff8f8; }
+    .fg input.input-ok    { border-color: #43a047 !important; }
     .fg textarea { resize: vertical; }
+    .field-err { font-size: 11px; color: #c62828; margin-top: 4px; display: flex; align-items: center; gap: 4px; }
+
+    /* ── Password strength meter ── */
+    .pw-strength { margin-top: 6px; }
+    .pw-strength-bar { height: 4px; border-radius: 4px; background: #e0e0e0; margin-bottom: 4px; }
+    .pw-strength-fill { height: 100%; border-radius: 4px; transition: width .3s, background .3s; }
+    .pw-hints { display: flex; flex-wrap: wrap; gap: 4px; }
+    .pw-hint { font-size: 10px; padding: 2px 7px; border-radius: 20px; display: flex; align-items: center; gap: 3px; }
+    .pw-hint.met  { background: #e8f5e9; color: #2e7d32; }
+    .pw-hint.unmet{ background: #f5f5f5; color: #aaa; }
 
     /* ── Alerts ── */
     .alert { padding: 10px 12px; border-radius: 8px; font-size: 13px; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
@@ -159,11 +171,7 @@
     .prac-chip-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
     .prac-chip-name { display: flex; flex-direction: column; align-items: center; gap: 5px; padding-top: 4px; }
     .info-btn { background: none; border: none; cursor: pointer; color: #2e7d32; padding: 0; }
-    .proof-box { background: #f9f9f9; border: 1px dashed #bbb; border-radius: 10px; padding: 14px; margin-bottom: 14px; }
-    .proof-btns { display: flex; gap: 8px; margin-top: 8px; }
-    .proof-btn { flex: 1; padding: 10px; border: 1px solid #2e7d32; background: #fff; color: #2e7d32; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
-    .proof-btn.active { background: #e8f5e9; }
-    .proof-preview { margin-top: 10px; background: #e8f5e9; border-radius: 8px; padding: 10px 12px; display: flex; align-items: center; gap: 8px; font-size: 12px; color: #2e7d32; font-weight: 600; }
+
     .log-item { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid #eee; }
     .log-item:last-child { border-bottom: none; }
     .log-dot  { width: 8px; height: 8px; background: #2e7d32; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
@@ -370,14 +378,68 @@ function Loading() {
   return <div className="loading-wrap"><div className="spinner" /><span>Loading...</span></div>;
 }
 
+/* ── Validation helpers ──────────────────────────────────── */
+function validateEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+}
+function pwChecks(pw) {
+  return {
+    length:    pw.length >= 8,
+    upper:     /[A-Z]/.test(pw),
+    lower:     /[a-z]/.test(pw),
+    number:    /[0-9]/.test(pw),
+    symbol:    /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~]/.test(pw),
+  };
+}
+function pwStrength(checks) {
+  const score = Object.values(checks).filter(Boolean).length;
+  if (score <= 2) return { pct: 20, color: '#e53935', label: 'Weak' };
+  if (score === 3) return { pct: 50, color: '#fb8c00', label: 'Fair' };
+  if (score === 4) return { pct: 80, color: '#fdd835', label: 'Good' };
+  return { pct: 100, color: '#43a047', label: 'Strong' };
+}
+
 /* ── Auth page ───────────────────────────────────────────── */
 function AuthPage({ onLogin }) {
   const [tab, setTab] = useState('login');
   const [form, setForm] = useState({ name: '', email: '', password: '', region: '', farmSize: '', cropType: '', experience: '' });
   const [err, setErr] = useState('');
   const [loading, setLoading] = useState(false);
+  const [touched, setTouched] = useState({ name: false, email: false, password: false });
+  // nameStatus: 'idle' | 'checking' | 'available' | 'taken'
+  const [nameStatus, setNameStatus] = useState('idle');
 
   const setField = (key, val) => setForm(f => ({ ...f, [key]: val }));
+  const touch    = (key)      => setTouched(t => ({ ...t, [key]: true }));
+
+  /* — Debounced username availability check — */
+  useEffect(() => {
+    const trimmed = form.name.trim();
+    if (!trimmed) { setNameStatus('idle'); return; }
+    setNameStatus('checking');
+    const timer = setTimeout(async () => {
+      try {
+        const res  = await fetch(`${API}/auth/check-username?name=${encodeURIComponent(trimmed)}`);
+        const data = await res.json();
+        setNameStatus(data.available ? 'available' : 'taken');
+      } catch {
+        setNameStatus('idle');
+      }
+    }, 500);            // 500 ms debounce
+    return () => clearTimeout(timer);
+  }, [form.name]);
+
+  /* live validation */
+  const emailOk = validateEmail(form.email);
+  const checks  = pwChecks(form.password);
+  const pwOk    = Object.values(checks).every(Boolean);
+  const strength = pwStrength(checks);
+
+  const nameErr  = touched.name     && nameStatus === 'taken'  ? 'This username is already taken. Please choose another.' : '';
+  const emailErr = touched.email    && !emailOk  ? 'Please enter a valid email address.' : '';
+  const pwErr    = touched.password && !pwOk     ? 'Password must include uppercase, lowercase, numbers, and symbols.' : '';
+  // Block submit while taken OR still in-flight
+  const registerReady = form.name.trim() && nameStatus === 'available' && emailOk && pwOk && form.region;
 
   const login = async () => {
     setErr(''); setLoading(true);
@@ -391,6 +453,16 @@ function AuthPage({ onLogin }) {
   };
 
   const register = async () => {
+    /* force-show all inline errors */
+    setTouched({ name: true, email: true, password: true });
+    if (nameStatus === 'taken')       { setErr('This username is already taken. Please choose another.'); return; }
+    if (nameStatus === 'checking')    { setErr('Please wait — checking username availability…'); return; }
+    if (!registerReady) {
+      if (!emailOk) { setErr('Please enter a valid email address.'); return; }
+      if (!pwOk)    { setErr('Password must include uppercase, lowercase, numbers, and symbols.'); return; }
+      setErr('Please fill all required fields.');
+      return;
+    }
     setErr(''); setLoading(true);
     try {
       const data = await apiFetch('/auth/register', { method: 'POST', body: form });
@@ -401,6 +473,16 @@ function AuthPage({ onLogin }) {
     } finally { setLoading(false); }
   };
 
+  const PwHints = () => (
+    <div className="pw-hints">
+      {[['length','8+ chars'],['upper','A–Z'],['lower','a–z'],['number','0–9'],['symbol','!@#…']].map(([k,label]) => (
+        <span key={k} className={`pw-hint ${checks[k] ? 'met' : 'unmet'}`}>
+          {checks[k] ? '✓' : '○'} {label}
+        </span>
+      ))}
+    </div>
+  );
+
   return (
     <div className="auth-wrap">
       <div className="auth-logo">
@@ -409,27 +491,121 @@ function AuthPage({ onLogin }) {
         <p>Gamified Sustainable Farming Platform</p>
       </div>
       <div className="tab-row">
-        <button className={`tab-btn ${tab === 'login' ? 'active' : ''}`} onClick={() => { setTab('login'); setErr(''); }}>Login</button>
-        <button className={`tab-btn ${tab === 'register' ? 'active' : ''}`} onClick={() => { setTab('register'); setErr(''); }}>Register</button>
+        <button className={`tab-btn ${tab === 'login' ? 'active' : ''}`}
+          onClick={() => { setTab('login'); setErr(''); setTouched({ name: false, email: false, password: false }); setNameStatus('idle'); }}>
+          Login
+        </button>
+        <button className={`tab-btn ${tab === 'register' ? 'active' : ''}`}
+          onClick={() => { setTab('register'); setErr(''); setTouched({ name: false, email: false, password: false }); setNameStatus('idle'); }}>
+          Register
+        </button>
       </div>
       {err && <div className="alert alert-error"><Icon name="error" size={16} />{err}</div>}
       {tab === 'login' ? (
         <>
-          <div className="fg"><label>Email</label><input type="email" placeholder="farmer@demo.com" value={form.email} onChange={e => setField('email', e.target.value)} /></div>
-          <div className="fg"><label>Password</label><input type="password" placeholder="••••••••" value={form.password} onChange={e => setField('password', e.target.value)} /></div>
-          <button className="btn btn-green" onClick={login} disabled={loading}>{loading ? 'Logging in...' : <><Icon name="login" size={18} />Login</>}</button>
+          <div className="fg">
+            <label>Email</label>
+            <input id="login-email" type="email" placeholder="farmer@demo.com" value={form.email} onChange={e => setField('email', e.target.value)} />
+          </div>
+          <div className="fg">
+            <label>Password</label>
+            <input id="login-password" type="password" placeholder="••••••••" value={form.password} onChange={e => setField('password', e.target.value)} />
+          </div>
+          <button id="login-btn" className="btn btn-green" onClick={login} disabled={loading}>{loading ? 'Logging in...' : <><Icon name="login" size={18} />Login</>}</button>
           <p className="hint">Demo: farmer@demo.com / farm123 &nbsp;|&nbsp; Admin: admin@agrigrow.app / admin123</p>
         </>
       ) : (
         <>
-          <div className="fg"><label>Full Name *</label><input placeholder="Your name" value={form.name} onChange={e => setField('name', e.target.value)} /></div>
-          <div className="fg"><label>Email *</label><input type="email" placeholder="your@email.com" value={form.email} onChange={e => setField('email', e.target.value)} /></div>
-          <div className="fg"><label>Password *</label><input type="password" placeholder="Min 6 characters" value={form.password} onChange={e => setField('password', e.target.value)} /></div>
-          <div className="fg"><label>State / Region *</label><select value={form.region} onChange={e => setField('region', e.target.value)}><option value="">Select...</option>{REGIONS.map(r => <option key={r}>{r}</option>)}</select></div>
+          {/* Full Name / Username with availability check */}
+          <div className="fg">
+            <label>Full Name / Username *</label>
+            <div style={{ position: 'relative' }}>
+              <input
+                id="reg-name"
+                placeholder="Your name"
+                value={form.name}
+                className={
+                  form.name.trim()
+                    ? nameStatus === 'available' ? 'input-ok'
+                    : nameStatus === 'taken'     ? 'input-error'
+                    : ''
+                  : ''
+                }
+                onChange={e => { setField('name', e.target.value); }}
+                onBlur={() => touch('name')}
+              />
+              {/* Inline status icon — right side of input */}
+              {nameStatus === 'checking' && (
+                <span style={{ position:'absolute', right:12, top:'50%', transform:'translateY(-50%)' }}>
+                  <div className="spinner" style={{ width:16, height:16, borderWidth:2 }} />
+                </span>
+              )}
+              {nameStatus === 'available' && form.name.trim() && (
+                <span style={{ position:'absolute', right:12, top:'50%', transform:'translateY(-50%)', color:'#43a047', fontSize:18, lineHeight:1 }}>✓</span>
+              )}
+              {nameStatus === 'taken' && (
+                <span style={{ position:'absolute', right:12, top:'50%', transform:'translateY(-50%)', color:'#e53935', fontSize:18, lineHeight:1 }}>✕</span>
+              )}
+            </div>
+            {nameErr && <div className="field-err"><Icon name="error" size={11} />{nameErr}</div>}
+            {nameStatus === 'available' && form.name.trim() && (
+              <div style={{ fontSize:11, color:'#43a047', marginTop:4, display:'flex', alignItems:'center', gap:4 }}>
+                <Icon name="check_circle" size={11} color="#43a047" /> Username available
+              </div>
+            )}
+          </div>
+
+          {/* Email with live validation */}
+          <div className="fg">
+            <label>Email *</label>
+            <input
+              id="reg-email"
+              type="email"
+              placeholder="your@email.com"
+              value={form.email}
+              className={touched.email ? (emailOk ? 'input-ok' : 'input-error') : ''}
+              onChange={e => setField('email', e.target.value)}
+              onBlur={() => touch('email')}
+            />
+            {emailErr && <div className="field-err"><Icon name="error" size={11} />{emailErr}</div>}
+          </div>
+
+          {/* Password with strength meter */}
+          <div className="fg">
+            <label>Password *</label>
+            <input
+              id="reg-password"
+              type="password"
+              placeholder="Min 8 characters"
+              value={form.password}
+              className={touched.password ? (pwOk ? 'input-ok' : 'input-error') : ''}
+              onChange={e => setField('password', e.target.value)}
+              onBlur={() => touch('password')}
+            />
+            {form.password && (
+              <div className="pw-strength">
+                <div className="pw-strength-bar">
+                  <div className="pw-strength-fill" style={{ width: strength.pct + '%', background: strength.color }} />
+                </div>
+                <PwHints />
+              </div>
+            )}
+            {pwErr && <div className="field-err"><Icon name="error" size={11} />{pwErr}</div>}
+          </div>
+
+          <div className="fg"><label>State / Region *</label><select id="reg-region" value={form.region} onChange={e => setField('region', e.target.value)}><option value="">Select...</option>{REGIONS.map(r => <option key={r}>{r}</option>)}</select></div>
           <div className="fg"><label>Main Crop Type</label><select value={form.cropType} onChange={e => setField('cropType', e.target.value)}><option value="">Select...</option>{CROP_TYPES.map(c => <option key={c}>{c}</option>)}</select></div>
           <div className="fg"><label>Farming Experience</label><select value={form.experience} onChange={e => setField('experience', e.target.value)}><option value="">Select...</option>{EXP_OPTS.map(x => <option key={x}>{x}</option>)}</select></div>
           <div className="fg"><label>Farm Size (acres)</label><input type="number" placeholder="e.g. 5" value={form.farmSize} onChange={e => setField('farmSize', e.target.value)} /></div>
-          <button className="btn btn-green" onClick={register} disabled={loading}>{loading ? 'Creating...' : <><Icon name="person_add" size={18} />Create Account</>}</button>
+          <button
+            id="register-btn"
+            className="btn btn-green"
+            onClick={register}
+            disabled={loading}
+            style={{ opacity: registerReady ? 1 : 0.6 }}
+          >
+            {loading ? 'Creating...' : <><Icon name="person_add" size={18} />Create Account</>}
+          </button>
         </>
       )}
     </div>
@@ -494,17 +670,29 @@ function Dashboard({ user, appState, onToggleTask }) {
 
 /* ── Modules page ────────────────────────────────────────── */
 function ModulesPage({ appState, onOpen }) {
+  const [customMods, setCustomMods] = useState([]);
+  useEffect(() => {
+    apiFetch('/modules/').then(d => setCustomMods(d.modules || [])).catch(() => {});
+  }, []);
+  const allMods = [...MODULES, ...customMods];
   return (
     <div className="page">
       <div className="sec-title"><Icon name="menu_book" size={15} color="#2e7d32" />Learning Modules</div>
-      {MODULES.map(m => {
+      {allMods.map(m => {
+        const lessonCount = m.lessons.length;
         const done = m.lessons.filter(l => appState.completedLessons.includes(l.id)).length;
         return (
           <div key={m.id} className="module-card" onClick={() => onOpen(m)}>
             <div className="mc-header">
-              <div className="mc-icon" style={{ background: m.bg }}><Icon name={m.icon} size={22} color={m.iconColor} /></div>
+              <div className="mc-icon" style={{ background: m.bg || (m.iconColor || '#2e7d32') + '22' }}>
+                <Icon name={m.icon} size={22} color={m.iconColor} />
+              </div>
               <div>
-                <div className="mc-cat">{m.cat}{m.expertVerified && <span className="badge-expert" style={{ marginLeft: 6 }}><Icon name="verified_user" size={10} />Expert Verified</span>}</div>
+                <div className="mc-cat">
+                  {m.cat}
+                  {m.expertVerified && <span className="badge-expert" style={{ marginLeft: 6 }}><Icon name="verified_user" size={10} />Expert Verified</span>}
+                  {m.isCustom && <span style={{ marginLeft: 6, fontSize: 10, background: '#e3f2fd', color: '#1565c0', padding: '2px 6px', borderRadius: 20, fontWeight: 700 }}>Custom</span>}
+                </div>
                 <div className="mc-title">{m.title}</div>
               </div>
             </div>
@@ -513,10 +701,10 @@ function ModulesPage({ appState, onOpen }) {
               <div className="mc-meta">
                 <span className="mc-meta-pts"><Icon name="star" size={11} />{m.pts} pts</span>
                 <span><Icon name="schedule" size={11} /> {m.time}</span>
-                <span><Icon name="bookmark" size={11} /> {done}/{m.lessons.length}</span>
+                <span><Icon name="bookmark" size={11} /> {done}/{lessonCount}</span>
                 <DiffBadge diff={m.difficulty} />
               </div>
-              <ProgBar pct={done / m.lessons.length * 100} />
+              <ProgBar pct={lessonCount > 0 ? done / lessonCount * 100 : 0} />
             </div>
           </div>
         );
@@ -567,13 +755,12 @@ function LessonView({ lesson, mod, appState, onCompleteLesson, onBack, onNext })
   const done = appState.completedLessons.includes(lesson.id);
   const idx = mod.lessons.findIndex(l => l.id === lesson.id);
 
-  // Reset quiz answer whenever the lesson changes
   useEffect(() => { setAns(null); }, [lesson.id]);
 
   const pick = async (i) => {
     if (ans !== null) return;
     setAns(i);
-    if (i === c.quiz.ans && !done) await onCompleteLesson(lesson.id, lesson.pts);
+    if (c.quiz && i === c.quiz.ans && !done) await onCompleteLesson(lesson.id, lesson.pts);
   };
 
   return (
@@ -597,19 +784,31 @@ function LessonView({ lesson, mod, appState, onCompleteLesson, onBack, onNext })
           return null;
         })}
       </div>
-      <div className="quiz-box">
-        <div className="quiz-q"><Icon name="quiz" size={16} color="#4a148c" />{c.quiz.q}</div>
-        <div className="quiz-opts">
-          {c.quiz.opts.map((opt, i) => (
-            <button key={i} className={`quiz-opt ${ans === i ? (i === c.quiz.ans ? 'correct' : 'wrong') : ''}`} onClick={() => pick(i)}>{opt}</button>
-          ))}
-        </div>
-        {ans !== null && (
-          <div className={`quiz-result ${ans === c.quiz.ans ? 'ok' : 'no'}`}>
-            {ans === c.quiz.ans ? <><Icon name="check_circle" size={14} />Correct! +{lesson.pts} points!</> : <><Icon name="cancel" size={14} />Wrong. Answer: {c.quiz.opts[c.quiz.ans]}</>}
+      {c.quiz ? (
+        <div className="quiz-box">
+          <div className="quiz-q"><Icon name="quiz" size={16} color="#4a148c" />{c.quiz.q}</div>
+          <div className="quiz-opts">
+            {c.quiz.opts.map((opt, i) => (
+              <button key={i} className={`quiz-opt ${ans === i ? (i === c.quiz.ans ? 'correct' : 'wrong') : ''}`} onClick={() => pick(i)}>{opt}</button>
+            ))}
           </div>
-        )}
-      </div>
+          {ans !== null && (
+            <div className={`quiz-result ${ans === c.quiz.ans ? 'ok' : 'no'}`}>
+              {ans === c.quiz.ans
+                ? <><Icon name="check_circle" size={14} />Correct! +{lesson.pts} points!</>
+                : <><Icon name="cancel" size={14} />Wrong. Answer: {c.quiz.opts[c.quiz.ans]}</>}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="quiz-box" style={{ background: '#f1f8e9', borderColor: '#c8e6c9' }}>
+          <div className="quiz-q" style={{ color: '#2e7d32' }}><Icon name="check_circle" size={16} color="#2e7d32" />Mark this lesson as complete to earn {lesson.pts} pts</div>
+          {done
+            ? <div className="quiz-result ok"><Icon name="check_circle" size={14} />Already completed! +{lesson.pts} points earned.</div>
+            : <button className="btn btn-green" style={{ marginTop: 8 }} onClick={async () => { if (!done) await onCompleteLesson(lesson.id, lesson.pts); }}><Icon name="check" size={16} />Mark Complete (+{lesson.pts} pts)</button>
+          }
+        </div>
+      )}
       <div className="lesson-footer">
         <button className="btn btn-outline" onClick={onBack}><Icon name="arrow_back" size={14} />Back</button>
         {idx < mod.lessons.length - 1 && <button className="btn btn-solid" onClick={() => onNext(mod.lessons[idx + 1])}>Next<Icon name="arrow_forward" size={14} /></button>}
@@ -645,7 +844,6 @@ function TrackerPage({ appState, onLogPractice, toast }) {
   const [notes, setNotes] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [guide, setGuide] = useState(null);
-  const [proofType, setProofType] = useState(null);
   const [logs, setLogs] = useState([]);
   const [logsLoading, setLogsLoading] = useState(true);
 
@@ -658,12 +856,12 @@ function TrackerPage({ appState, onLogPractice, toast }) {
   const logPractice = async () => {
     if (!sel.length) return;
     try {
-      const data = await apiFetch('/tracker', { method: 'POST', body: { practices: sel, notes, date, hasProof: proofType !== null } });
+      const data = await apiFetch('/tracker', { method: 'POST', body: { practices: sel, notes, date } });
       onLogPractice(data);
-      const newLog = { practices: sel, notes, date, pts: data.pts, hasProof: proofType !== null };
+      const newLog = { practices: sel, notes, date, pts: data.pts };
       setLogs(l => [newLog, ...l]);
-      toast(`Logged! +${data.pts} pts${proofType ? ' · Proof submitted' : ''}`);
-      setSel([]); setNotes(''); setProofType(null);
+      toast(`Logged! +${data.pts} pts`);
+      setSel([]); setNotes('');
     } catch (e) {
       toast('Failed to log: ' + e.message);
     }
@@ -686,17 +884,7 @@ function TrackerPage({ appState, onLogPractice, toast }) {
           </div>
         ))}
       </div>
-      <div className="proof-box">
-        <div style={{ fontSize: 13, fontWeight: 600, color: '#444', display: 'flex', alignItems: 'center', gap: 6 }}>
-          <Icon name="photo_camera" size={14} color="#2e7d32" />Submit Proof <span style={{ fontSize: 11, color: '#888', fontWeight: 400 }}>(optional)</span>
-        </div>
-        <div className="proof-btns">
-          <button className={`proof-btn ${proofType === 'photo' ? 'active' : ''}`} onClick={() => setProofType(proofType === 'photo' ? null : 'photo')}><Icon name="photo_camera" size={14} />Upload Photo</button>
-          <button className={`proof-btn ${proofType === 'confirm' ? 'active' : ''}`} onClick={() => setProofType(proofType === 'confirm' ? null : 'confirm')}><Icon name="check_circle" size={14} />Confirm Done</button>
-        </div>
-        {proofType === 'photo' && <div className="proof-preview"><Icon name="photo_camera" size={16} /><span>Photo proof attached — farm_activity_{date}.jpg</span></div>}
-        {proofType === 'confirm' && <div className="proof-preview"><Icon name="check_circle" size={16} /><span>Activity confirmed as completed on {date}</span></div>}
-      </div>
+
       <div className="fg"><label>Notes (optional)</label><textarea rows={3} placeholder="Any observations or results..." value={notes} onChange={e => setNotes(e.target.value)} /></div>
       <button className="btn btn-green" onClick={logPractice} disabled={!sel.length} style={{ opacity: sel.length ? 1 : .5 }}>
         <Icon name="check" size={16} />Submit Practice Log (+{sel.length * 20} pts)
@@ -709,7 +897,7 @@ function TrackerPage({ appState, onLogPractice, toast }) {
             <div className="log-dot" />
             <div style={{ flex: 1 }}>
               <div className="log-lbl">{entry.practices.map(id => PRACTICES.find(p => p.id === id)?.label).join(', ')}</div>
-              <div className="log-meta">{entry.date}{entry.hasProof && ' · 📷 Proof'}{entry.notes && ` · ${entry.notes}`}</div>
+              <div className="log-meta">{entry.date}{entry.notes && ` · ${entry.notes}`}</div>
             </div>
             <div className="log-pts">+{entry.pts}</div>
           </div>
@@ -817,8 +1005,7 @@ function CommunityPage({ user, appState, onCommunityPost, toast }) {
               <div className="fp-body">{p.body}</div>
               {p.reply && <div className="fp-reply"><div className="rep-name"><Icon name="verified_user" size={11} color="#1565c0" />{p.reply.author}</div>{p.reply.text}</div>}
               <div className="fp-footer">
-                <button className={`fp-action ${p.liked ? 'liked' : ''}`} onClick={() => likePost(p.id)}><Icon name="thumb_up" size={14} />{p.likes}</button>
-                <button className="fp-action"><Icon name="chat_bubble" size={14} />Reply</button>
+                 <button className={`fp-action ${p.liked ? 'liked' : ''}`} onClick={() => likePost(p.id)}><Icon name="thumb_up" size={14} />{p.likes}</button>
               </div>
             </div>
           ))}
@@ -904,10 +1091,13 @@ function SettingsPage({ user, onBack, onSaveProfile, onLogout }) {
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
-  const [toggles, setToggles] = useState({ pushNotifs: true, dailyReminder: true, weeklyReport: false, darkMode: false, sounds: true });
+  // Change-password state
+  const [pwForm, setPwForm]   = useState({ cur: '', nw: '', cfm: '' });
+  const [pwErr, setPwErr]     = useState('');
+  const [pwSaved, setPwSaved] = useState(false);
+  const [pwSaving, setPwSaving] = useState(false);
 
   const setField = (k, v) => setForm(f => ({ ...f, [k]: v }));
-  const flipToggle = (k) => setToggles(t => ({ ...t, [k]: !t[k] }));
 
   const save = async () => {
     setErr(''); setSaving(true);
@@ -919,6 +1109,22 @@ function SettingsPage({ user, onBack, onSaveProfile, onLogout }) {
     } catch (e) {
       setErr(e.message);
     } finally { setSaving(false); }
+  };
+
+  const changePassword = async () => {
+    setPwErr(''); setPwSaved(false);
+    if (!pwForm.cur || !pwForm.nw || !pwForm.cfm) { setPwErr('All fields are required.'); return; }
+    if (!Object.values(pwChecks(pwForm.nw)).every(Boolean)) { setPwErr('Password must include uppercase, lowercase, numbers, and symbols.'); return; }
+    if (pwForm.nw !== pwForm.cfm) { setPwErr('New passwords do not match.'); return; }
+    setPwSaving(true);
+    try {
+      await apiFetch('/auth/change-password', { method: 'PUT', body: { currentPassword: pwForm.cur, newPassword: pwForm.nw, confirmPassword: pwForm.cfm } });
+      setPwSaved(true);
+      setPwForm({ cur: '', nw: '', cfm: '' });
+      setTimeout(() => setPwSaved(false), 3000);
+    } catch (e) {
+      setPwErr(e.message);
+    } finally { setPwSaving(false); }
   };
 
   if (sub === 'edit') return (
@@ -937,28 +1143,67 @@ function SettingsPage({ user, onBack, onSaveProfile, onLogout }) {
     </div>
   );
 
-  if (sub === 'notifications') return (
+  if (sub === 'privacy') return (
     <div className="page">
-      <button className="back-btn" onClick={() => setSub(null)}><Icon name="arrow_back" size={14} />Settings</button>
-      <div className="sec-title"><Icon name="notifications" size={15} color="#2e7d32" />Notification Settings</div>
-      {[{ k: 'pushNotifs', l: 'Push Notifications', s: 'New modules and badges' }, { k: 'dailyReminder', l: 'Daily Reminder', s: 'Remind me to log practices' }, { k: 'weeklyReport', l: 'Weekly Report', s: 'Summary of your progress' }, { k: 'sounds', l: 'Sound Alerts', s: 'Play sound for notifications' }].map(item => (
-        <div key={item.k} className="toggle-row">
-          <div><div className="settings-item-label">{item.l}</div><div className="settings-item-sub">{item.s}</div></div>
-          <Toggle on={toggles[item.k]} onClick={() => flipToggle(item.k)} />
-        </div>
-      ))}
+      <button className="back-btn" onClick={() => { setSub(null); setPwForm({ cur:'', nw:'', cfm:'' }); setPwErr(''); setPwSaved(false); }}>
+        <Icon name="arrow_back" size={14} />Settings
+      </button>
+      <div className="sec-title"><Icon name="lock" size={15} color="#2e7d32" />Privacy &amp; Security</div>
+
+      {pwSaved && <div className="alert alert-success"><Icon name="check_circle" size={14} />Password updated successfully</div>}
+      {pwErr   && <div className="alert alert-error"><Icon name="error"         size={14} />{pwErr}</div>}
+
+      {/* Current Password */}
+      <div className="fg">
+        <label>Current Password</label>
+        <input id="cur-pw" type="password" placeholder="Enter current password"
+          value={pwForm.cur} onChange={e => setPwForm(f => ({ ...f, cur: e.target.value }))} />
+      </div>
+
+      {/* New Password + strength meter */}
+      <div className="fg">
+        <label>New Password</label>
+        <input id="new-pw" type="password" placeholder="Min 8 characters"
+          value={pwForm.nw}
+          className={pwForm.nw ? (Object.values(pwChecks(pwForm.nw)).every(Boolean) ? 'input-ok' : 'input-error') : ''}
+          onChange={e => setPwForm(f => ({ ...f, nw: e.target.value }))} />
+        {pwForm.nw && (() => {
+          const chk = pwChecks(pwForm.nw);
+          const str = pwStrength(chk);
+          return (
+            <div className="pw-strength">
+              <div className="pw-strength-bar">
+                <div className="pw-strength-fill" style={{ width: str.pct + '%', background: str.color }} />
+              </div>
+              <div className="pw-hints">
+                {[['length','8+ chars'],['upper','A–Z'],['lower','a–z'],['number','0–9'],['symbol','!@#…']].map(([k,label]) => (
+                  <span key={k} className={`pw-hint ${chk[k] ? 'met' : 'unmet'}`}>{chk[k] ? '✓' : '○'} {label}</span>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
+      </div>
+
+      {/* Confirm New Password */}
+      <div className="fg">
+        <label>Confirm New Password</label>
+        <input id="cfm-pw" type="password" placeholder="Repeat new password"
+          value={pwForm.cfm}
+          className={pwForm.cfm ? (pwForm.cfm === pwForm.nw ? 'input-ok' : 'input-error') : ''}
+          onChange={e => setPwForm(f => ({ ...f, cfm: e.target.value }))} />
+        {pwForm.cfm && pwForm.cfm !== pwForm.nw && (
+          <div className="field-err"><Icon name="error" size={11} />Passwords do not match</div>
+        )}
+      </div>
+
+      <button id="change-pw-btn" className="btn btn-green" onClick={changePassword}
+        disabled={pwSaving} style={{ opacity: pwSaving ? 0.6 : 1 }}>
+        {pwSaving ? 'Updating...' : <><Icon name="lock_reset" size={16} />Update Password</>}
+      </button>
     </div>
   );
 
-  if (sub === 'privacy') return (
-    <div className="page">
-      <button className="back-btn" onClick={() => setSub(null)}><Icon name="arrow_back" size={14} />Settings</button>
-      <div className="sec-title"><Icon name="lock" size={15} color="#2e7d32" />Privacy & Security</div>
-      <div className="fg"><label>New Password</label><input type="password" placeholder="Enter new password" /></div>
-      <div className="fg"><label>Confirm Password</label><input type="password" placeholder="Confirm new password" /></div>
-      <button className="btn btn-green"><Icon name="check" size={16} />Update Password</button>
-    </div>
-  );
 
   if (sub === 'about') return (
     <div className="page">
@@ -986,24 +1231,17 @@ function SettingsPage({ user, onBack, onSaveProfile, onLogout }) {
         ))}
       </div>
       <div style={{ marginBottom: 16 }}>
-        <div className="settings-section-title">Preferences</div>
-        <div className="settings-item" onClick={() => setSub('notifications')}>
-          <div className="settings-item-left"><Icon name="notifications" size={18} color="#2e7d32" /><div><div className="settings-item-label">Notifications</div><div className="settings-item-sub">Reminders and alerts</div></div></div>
+        <div className="settings-section-title">Support</div>
+        <div className="settings-item" onClick={() => setSub('about')}>
+          <div className="settings-item-left">
+            <Icon name="info" size={18} color="#2e7d32" />
+            <div>
+              <div className="settings-item-label">About AgriGrow</div>
+              <div className="settings-item-sub">SIH25075 · Version 1.0.0</div>
+            </div>
+          </div>
           <Icon name="chevron_right" size={16} color="#bbb" />
         </div>
-        <div className="toggle-row">
-          <div className="settings-item-left"><Icon name="dark_mode" size={18} color="#2e7d32" /><div><div className="settings-item-label">Dark Mode</div><div className="settings-item-sub">Easy on the eyes at night</div></div></div>
-          <Toggle on={toggles.darkMode} onClick={() => flipToggle('darkMode')} />
-        </div>
-      </div>
-      <div style={{ marginBottom: 16 }}>
-        <div className="settings-section-title">Support</div>
-        {[{ icon: 'info', label: 'About AgriGrow', sp: 'about', desc: 'SIH25075 · Version 1.0.0' }, { icon: 'chat_bubble', label: 'Send Feedback', sp: 'feedback', desc: 'Help us improve' }].map(item => (
-          <div key={item.sp} className="settings-item" onClick={() => setSub(item.sp)}>
-            <div className="settings-item-left"><Icon name={item.icon} size={18} color="#2e7d32" /><div><div className="settings-item-label">{item.label}</div><div className="settings-item-sub">{item.desc}</div></div></div>
-            <Icon name="chevron_right" size={16} color="#bbb" />
-          </div>
-        ))}
       </div>
       <button className="btn btn-danger" onClick={onLogout}><Icon name="logout" size={16} />Log Out</button>
     </div>
@@ -1015,25 +1253,34 @@ function AdminPanel({ adminUser }) {
   const [tab, setTab]           = useState('analytics');
   const [stats, setStats]       = useState(null);
   const [users, setUsers]       = useState([]);
-  const [selUser, setSelUser]   = useState(null);   // user detail modal
+  const [selUser, setSelUser]   = useState(null);
   const [customMods, setCustomMods] = useState([]);
   const [loading, setLoading]   = useState(false);
   const [showAddMod, setShowAddMod] = useState(false);
-  const [modForm, setModForm]   = useState({ title: '', category: 'Soil Management', difficulty: 'Beginner', icon: 'eco', iconColor: '#2e7d32', description: '', duration: '30 min', expertVerified: false });
+  const BLANK_FORM = { title: '', category: 'Soil Management', difficulty: 'Beginner', icon: 'eco', iconColor: '#2e7d32', description: '', duration: '30 min', expertVerified: false };
+  const [modForm, setModForm]   = useState(BLANK_FORM);
   const [modSaving, setModSaving] = useState(false);
   const [modErr, setModErr]     = useState('');
   const [toast, setToast]       = useState('');
   const [usersLoaded, setUsersLoaded] = useState(false);
   const [modsLoaded, setModsLoaded]   = useState(false);
+  const [showEditMod, setShowEditMod]     = useState(false);
+  const [editingModId, setEditingModId]   = useState(null);
+  const [editModErr, setEditModErr]       = useState('');
+  const [editModSaving, setEditModSaving] = useState(false);
+  const [managingMod, setManagingMod]     = useState(null);
+  const [manageLessons, setManageLessons] = useState([]);
+  const [lessonForm, setLessonForm]       = useState({ title: '', subtitle: '', pts: 20, expertVerified: false });
+  const [editingLesson, setEditingLesson] = useState(null);
+  const [lessonSaving, setLessonSaving]   = useState(false);
+  const [lessonErr, setLessonErr]         = useState('');
 
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 3000); };
 
-  // Load stats on mount
   useEffect(() => {
     apiFetch('/admin/stats').then(d => setStats(d)).catch(() => {});
   }, []);
 
-  // Load users when tab is users
   useEffect(() => {
     if (tab === 'users' && !usersLoaded) {
       setLoading(true);
@@ -1044,15 +1291,11 @@ function AdminPanel({ adminUser }) {
     }
   }, [tab]);
 
-  // Open user detail
   const openUser = async (userId) => {
-    try {
-      const d = await apiFetch(`/admin/users/${userId}`);
-      setSelUser(d);
-    } catch (e) { showToast('Failed to load user info'); }
+    try { const d = await apiFetch(`/admin/users/${userId}`); setSelUser(d); }
+    catch (e) { showToast('Failed to load user info'); }
   };
 
-  // Submit new module
   const submitModule = async () => {
     setModErr('');
     if (!modForm.title.trim() || !modForm.description.trim()) { setModErr('Title and description are required.'); return; }
@@ -1060,14 +1303,29 @@ function AdminPanel({ adminUser }) {
     try {
       const d = await apiFetch('/admin/modules', { method: 'POST', body: modForm });
       setCustomMods(m => [d.module, ...m]);
-      setShowAddMod(false);
-      setModForm({ title: '', category: 'Soil Management', difficulty: 'Beginner', icon: 'eco', iconColor: '#2e7d32', description: '', duration: '30 min', expertVerified: false });
-      showToast('Module created successfully!');
+      setShowAddMod(false); setModForm(BLANK_FORM);
+      showToast('Module created!');
     } catch (e) { setModErr(e.message); }
     finally { setModSaving(false); }
   };
 
-  // Delete custom module
+  const openEditMod = (m) => {
+    setModForm({ title: m.title, category: m.category, difficulty: m.difficulty, icon: m.icon || 'eco', iconColor: m.icon_color || '#2e7d32', description: m.description, duration: m.duration, expertVerified: !!m.expert_verified });
+    setEditingModId(m.id); setEditModErr(''); setShowEditMod(true);
+  };
+
+  const saveEditMod = async () => {
+    setEditModErr('');
+    if (!modForm.title.trim() || !modForm.description.trim()) { setEditModErr('Title and description are required.'); return; }
+    setEditModSaving(true);
+    try {
+      const d = await apiFetch(`/admin/modules/${editingModId}`, { method: 'PUT', body: modForm });
+      setCustomMods(m => m.map(x => x.id === editingModId ? { ...x, ...d.module } : x));
+      setShowEditMod(false); showToast('Module updated!');
+    } catch (e) { setEditModErr(e.message); }
+    finally { setEditModSaving(false); }
+  };
+
   const deleteModule = async (id) => {
     if (!window.confirm('Delete this module?')) return;
     try {
@@ -1075,6 +1333,45 @@ function AdminPanel({ adminUser }) {
       setCustomMods(m => m.filter(x => x.id !== id));
       showToast('Module deleted.');
     } catch (e) { showToast('Failed to delete.'); }
+  };
+
+  const openManageLessons = (m) => {
+    setManagingMod(m); setManageLessons(m.lessons || []);
+    setLessonForm({ title: '', subtitle: '', pts: 20, expertVerified: false });
+    setEditingLesson(null); setLessonErr('');
+  };
+
+  const startEditLesson = (l) => {
+    setEditingLesson(l);
+    setLessonForm({ title: l.title, subtitle: l.subtitle || '', pts: l.pts, expertVerified: !!l.expertVerified });
+  };
+
+  const saveLesson = async () => {
+    setLessonErr('');
+    if (!lessonForm.title.trim()) { setLessonErr('Lesson title is required.'); return; }
+    setLessonSaving(true);
+    try {
+      if (editingLesson) {
+        const d = await apiFetch(`/admin/modules/${managingMod.id}/lessons/${editingLesson.id}`, { method: 'PUT', body: lessonForm });
+        setManageLessons(ls => ls.map(l => l.id === editingLesson.id ? { ...l, ...d.lesson } : l));
+        setEditingLesson(null);
+      } else {
+        const d = await apiFetch(`/admin/modules/${managingMod.id}/lessons`, { method: 'POST', body: lessonForm });
+        setManageLessons(ls => [...ls, d.lesson]);
+      }
+      setLessonForm({ title: '', subtitle: '', pts: 20, expertVerified: false });
+      showToast(editingLesson ? 'Lesson updated!' : 'Lesson added!');
+    } catch (e) { setLessonErr(e.message); }
+    finally { setLessonSaving(false); }
+  };
+
+  const removeLesson = async (lessonId) => {
+    if (!window.confirm('Delete this lesson?')) return;
+    try {
+      await apiFetch(`/admin/modules/${managingMod.id}/lessons/${lessonId}`, { method: 'DELETE' });
+      setManageLessons(ls => ls.filter(l => l.id !== lessonId));
+      showToast('Lesson deleted.');
+    } catch (e) { showToast('Failed to delete lesson.'); }
   };
 
   const ROLE_COLOR  = { admin: '#7b1fa2', expert: '#1565c0', farmer: '#2e7d32' };
@@ -1308,13 +1605,105 @@ function AdminPanel({ adminUser }) {
                   <div className="settings-item-sub">{m.category} · {m.difficulty} · {m.duration}</div>
                 </div>
               </div>
-              <button className="fp-action" style={{ color: '#e53935' }} onClick={() => deleteModule(m.id)} title="Delete module">
-                <Icon name="delete" size={15} />
-              </button>
+              <div style={{ display: 'flex', gap: 4 }}>
+                <button className="btn btn-outline" style={{ padding: '4px 8px', fontSize: 12 }} onClick={() => openManageLessons(m)}><Icon name="list" size={13} />Lessons</button>
+                <button className="btn btn-outline" style={{ padding: '4px 8px', fontSize: 12 }} onClick={() => openEditMod(m)}><Icon name="edit" size={13} />Edit</button>
+                <button className="fp-action" style={{ color: '#e53935' }} onClick={() => deleteModule(m.id)}><Icon name="delete" size={15} /></button>
+              </div>
             </div>
           ))}
         </>}
       </>)}
+
+      {/* Edit Module Modal */}
+      {showEditMod && (
+        <div className="modal-overlay" onClick={() => setShowEditMod(false)}>
+          <div className="modal-box" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-title"><Icon name="edit" size={20} color="#1565c0" />Edit Module</div>
+              <button className="modal-close" onClick={() => setShowEditMod(false)}><Icon name="close" size={16} /></button>
+            </div>
+            {editModErr && <div className="alert alert-error"><Icon name="error" size={14} />{editModErr}</div>}
+            <div className="fg"><label>Module Title *</label><input value={modForm.title} onChange={e => setModForm(f => ({ ...f, title: e.target.value }))} /></div>
+            <div className="fg"><label>Category *</label>
+              <select value={modForm.category} onChange={e => setModForm(f => ({ ...f, category: e.target.value }))}>
+                {['Soil Management','Water Management','Pest Management','Crop Management','Agroforestry','Other'].map(c => <option key={c}>{c}</option>)}
+              </select>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div className="fg"><label>Difficulty</label>
+                <select value={modForm.difficulty} onChange={e => setModForm(f => ({ ...f, difficulty: e.target.value }))}>
+                  {['Beginner','Intermediate','Advanced'].map(d => <option key={d}>{d}</option>)}
+                </select>
+              </div>
+              <div className="fg"><label>Duration</label><input placeholder="30 min" value={modForm.duration} onChange={e => setModForm(f => ({ ...f, duration: e.target.value }))} /></div>
+            </div>
+            <div className="fg"><label>Description *</label><textarea rows={3} value={modForm.description} onChange={e => setModForm(f => ({ ...f, description: e.target.value }))} /></div>
+            <div className="fg"><label>Icon</label>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {['eco','water_drop','bug_report','refresh','grain','park','local_florist','agriculture','science','wb_sunny'].map(ic => <button key={ic} onClick={() => setModForm(f => ({ ...f, icon: ic }))} style={{ width: 36, height: 36, borderRadius: 8, border: `2px solid ${modForm.icon===ic?'#1565c0':'#ddd'}`, background: modForm.icon===ic?'#e3f2fd':'#f9f9f9', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}><Icon name={ic} size={18} color={modForm.icon===ic?'#1565c0':'#aaa'} /></button>)}
+              </div>
+            </div>
+            <div className="fg"><label>Icon Colour</label>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {['#2e7d32','#1565c0','#e65100','#558b2f','#6a1b9a','#4e342e','#f57c00','#00838f'].map(c => <button key={c} onClick={() => setModForm(f => ({ ...f, iconColor: c }))} style={{ width:28, height:28, borderRadius:'50%', border:`3px solid ${modForm.iconColor===c?'#222':'transparent'}`, background:c, cursor:'pointer' }} />)}
+              </div>
+            </div>
+            <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:14 }}>
+              <input type="checkbox" id="evEditCheck" checked={modForm.expertVerified} onChange={e => setModForm(f => ({ ...f, expertVerified: e.target.checked }))} />
+              <label htmlFor="evEditCheck" style={{ fontSize:13, cursor:'pointer' }}>Mark as Expert Verified</label>
+            </div>
+            <button className="btn btn-green" onClick={saveEditMod} disabled={editModSaving}>
+              {editModSaving ? 'Saving...' : <><Icon name="save" size={16} />Save Changes</>}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Manage Lessons Panel */}
+      {managingMod && (
+        <div className="modal-overlay" onClick={() => setManagingMod(null)}>
+          <div className="modal-box" onClick={e => e.stopPropagation()} style={{ maxHeight: '92vh' }}>
+            <div className="modal-header">
+              <div className="modal-title"><Icon name="list" size={20} color="#1565c0" />Lessons — {managingMod.title}</div>
+              <button className="modal-close" onClick={() => setManagingMod(null)}><Icon name="close" size={16} /></button>
+            </div>
+            {manageLessons.length === 0
+              ? <p style={{ fontSize:13, color:'#888', textAlign:'center', padding:'12px 0' }}>No lessons yet.</p>
+              : manageLessons.map((l, i) => (
+                <div key={l.id} style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 0', borderBottom:'1px solid #eee' }}>
+                  <div style={{ width:28, height:28, borderRadius:7, background:'#e3f2fd', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:700, fontSize:12, color:'#1565c0', flexShrink:0 }}>{i+1}</div>
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontSize:13, fontWeight:600 }}>{l.title}</div>
+                    <div style={{ fontSize:11, color:'#888' }}>{l.subtitle||'—'} · {l.pts} pts {l.expertVerified?'· ✓':''}</div>
+                  </div>
+                  <button className="btn btn-outline" style={{ padding:'4px 8px', fontSize:11 }} onClick={() => startEditLesson(l)}><Icon name="edit" size={13} /></button>
+                  <button className="fp-action" style={{ color:'#e53935' }} onClick={() => removeLesson(l.id)}><Icon name="delete" size={14} /></button>
+                </div>
+              ))
+            }
+            <div style={{ marginTop:14, background:'#f9f9f9', border:'1px solid #e0e0e0', borderRadius:10, padding:12 }}>
+              <div style={{ fontSize:12, fontWeight:700, color:'#555', marginBottom:10 }}>{editingLesson ? 'Edit Lesson' : 'Add New Lesson'}</div>
+              {lessonErr && <div className="alert alert-error" style={{ marginBottom:8 }}><Icon name="error" size={13} />{lessonErr}</div>}
+              <div className="fg"><label>Lesson Title *</label><input placeholder="e.g. Understanding Soil Biology" value={lessonForm.title} onChange={e => setLessonForm(f => ({ ...f, title: e.target.value }))} /></div>
+              <div className="fg"><label>Subtitle / Summary</label><input placeholder="Short description" value={lessonForm.subtitle} onChange={e => setLessonForm(f => ({ ...f, subtitle: e.target.value }))} /></div>
+              <div style={{ display:'flex', gap:10, alignItems:'center', marginBottom:10 }}>
+                <div className="fg" style={{ flex:1, marginBottom:0 }}><label>Points</label><input type="number" min={5} max={200} value={lessonForm.pts} onChange={e => setLessonForm(f => ({ ...f, pts: parseInt(e.target.value)||20 }))} /></div>
+                <div style={{ display:'flex', alignItems:'center', gap:6, paddingTop:18 }}>
+                  <input type="checkbox" id="lvCheck" checked={lessonForm.expertVerified} onChange={e => setLessonForm(f => ({ ...f, expertVerified: e.target.checked }))} />
+                  <label htmlFor="lvCheck" style={{ fontSize:12 }}>Expert Verified</label>
+                </div>
+              </div>
+              <div style={{ display:'flex', gap:8 }}>
+                <button className="btn btn-green" style={{ flex:1 }} onClick={saveLesson} disabled={lessonSaving}>
+                  {lessonSaving ? 'Saving...' : <><Icon name="save" size={15} />{editingLesson ? 'Update Lesson' : 'Add Lesson'}</>}
+                </button>
+                {editingLesson && <button className="btn btn-outline" onClick={() => { setEditingLesson(null); setLessonForm({ title:'', subtitle:'', pts:20, expertVerified:false }); }}>Cancel</button>}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {toast && <div className="toast"><Icon name="check_circle" size={15} />{toast}</div>}
     </div>
