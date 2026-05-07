@@ -36,7 +36,7 @@ from routes.modules     import modules_bp
 
 # ── Create the Flask app ──────────────────────────────────────────────────────
 app = Flask(__name__, static_folder='..', static_url_path='')
-CORS(app)  # Allow requests from any origin (required for GitHub Pages → Render cross-origin calls)
+CORS(app)  # Allow requests from any origin (fine for local dev)
 
 # ── Register Blueprints (each maps a URL prefix to a route file) ──────────────
 app.register_blueprint(auth_bp,        url_prefix='/api/auth')
@@ -48,18 +48,11 @@ app.register_blueprint(leaderboard_bp, url_prefix='/api/leaderboard')
 app.register_blueprint(admin_bp,       url_prefix='/api/admin')
 app.register_blueprint(modules_bp,     url_prefix='/api/modules')
 
-# ── Serve frontend (local dev only — in production GitHub Pages serves the HTML) ──
+# ── Serve AgriGrow.html from the parent folder ───────────────────────────────
 @app.route('/')
 @app.route('/AgriGrow.html')
-@app.route('/index.html')
 def serve_frontend():
-    # Try index.html first, fall back to AgriGrow.html for local dev
-    import os
-    base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    for name in ('index.html', 'AgriGrow.html'):
-        if os.path.exists(os.path.join(base, name)):
-            return send_from_directory('..', name)
-    return jsonify({'error': 'Frontend not found'}), 404
+    return send_from_directory('..', 'AgriGrow.html')
 
 # ── Health check ─────────────────────────────────────────────────────────────
 from datetime import datetime
@@ -81,11 +74,9 @@ def server_error(e):
 # ── Start the server ──────────────────────────────────────────────────────────
 if __name__ == '__main__':
     PORT = int(os.getenv('PORT', 5000))
-    # debug=False in production (Render/Railway set PORT); True only locally
-    IS_LOCAL = os.getenv('RENDER') is None and os.getenv('RAILWAY_ENVIRONMENT') is None
     print()
     print('🌱 AgriGrow Flask Backend running!')
     print(f'   Health: http://localhost:{PORT}/api/health')
     print(f'   App:    http://localhost:{PORT}/AgriGrow.html')
     print()
-    app.run(host='0.0.0.0', port=PORT, debug=IS_LOCAL)
+    app.run(host='0.0.0.0', port=PORT, debug=True)
