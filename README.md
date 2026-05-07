@@ -70,8 +70,8 @@ AgriGrow/
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/Aswant00/AgriGrow1.git
-cd AgriGrow1
+git clone https://github.com/Aswant00/AgriGrow.git
+cd AgriGrow
 ```
 
 ---
