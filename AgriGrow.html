@@ -280,7 +280,9 @@ ser<head>
 const { useState, useEffect, useCallback } = React;
 
 /* ── Config ─────────────────────────────────────────────── */
-const API = '/api';
+const API = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+  ? '/api'
+  : 'https://agrigrow-backend.onrender.com/api';
 
 /* ── API helper ─────────────────────────────────────────── */
 async function apiFetch(endpoint, options = {}) {
