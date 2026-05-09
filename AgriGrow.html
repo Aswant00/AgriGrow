@@ -279,25 +279,205 @@ ser<head>
 <script type="text/babel">
 const { useState, useEffect, useCallback } = React;
 
-/* ── Config ─────────────────────────────────────────────── */
-const API = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
-  ? '/api'
-  : 'https://agrigrow-backend.onrender.com/api';
+/* ── localStorage DB ────────────────────────────────────── */
+const S = {
+  g: (k, d) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } },
+  s: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+};
 
-/* ── API helper ─────────────────────────────────────────── */
-async function apiFetch(endpoint, options = {}) {
-  const token = localStorage.getItem('agrigrow_token');
-  const res = await fetch(`${API}${endpoint}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    ...options,
-    body: options.body ? JSON.stringify(options.body) : undefined,
+(function initDB() {
+  if (S.g('ag_init', false)) return;
+  S.s('ag_users', [
+    { id:'u1', name:'Demo Farmer', email:'farmer@demo.com', password:'farm123', role:'farmer', region:'Tamil Nadu', cropType:'Rice', farmSize:'5', experience:'3-5 years', points:320, streak:3, createdAt:'2025-01-01' },
+    { id:'u2', name:'Admin', email:'admin@agrigrow.app', password:'admin123', role:'admin', region:'Karnataka', cropType:'Vegetables', farmSize:'10', experience:'5-10 years', points:980, streak:7, createdAt:'2025-01-01' },
+  ]);
+  const defBadges = () => ['b1','b2','b3','b4','b5','b6'].map(id => ({ id, earned: false }));
+  S.s('ag_prog_u1', { completedLessons:['1a'], badges: defBadges().map(b => b.id==='b1' ? {...b,earned:true} : b) });
+  S.s('ag_prog_u2', { completedLessons:[], badges: defBadges() });
+  S.s('ag_track_u1', []); S.s('ag_track_u2', []);
+  S.s('ag_posts', [
+    { id:'p1', userId:'u1', author:'Demo Farmer', body:'Started no-till farming this season! Already seeing less erosion.', tag:'Soil', time:'2 hours ago', likes:5, isExpert:false, reply:{ author:'AgriExpert Ravi', text:"Great start! Give it 2–3 seasons and you'll see earthworm populations increase dramatically." } },
+    { id:'p2', userId:'u3', author:'Priya K.', body:'My drip irrigation system saved 40% water this month. Highly recommend!', tag:'Water', time:'1 day ago', likes:12, isExpert:false, reply:null },
+    { id:'p3', userId:'u4', author:'AgriExpert Ravi', body:'Reminder: Now is the best time to set up compost bins before the rains.', tag:'General', time:'2 days ago', likes:23, isExpert:true, reply:null },
+  ]);
+  S.s('ag_cmods', []);
+  S.s('ag_init', true);
+})();
+
+function _uid() { return S.g('ag_sess', null); }
+function _users() { return S.g('ag_users', []); }
+function _user(id) { return _users().find(u => u.id === id); }
+function _saveUsers(us) { S.s('ag_users', us); }
+function _prog(id) { const p = S.g(`ag_prog_${id}`, { completedLessons:[], badges:[] }); if (!p.badges.length) p.badges = ['b1','b2','b3','b4','b5','b6'].map(id => ({ id, earned:false })); return p; }
+function _saveProg(id, p) { S.s(`ag_prog_${id}`, p); }
+function _track(id) { return S.g(`ag_track_${id}`, []); }
+function _todayKey(id) { return `ag_tasks_${id}_${new Date().toISOString().split('T')[0]}`; }
+function _todayTasks(id) {
+  const saved = S.g(_todayKey(id), null);
+  if (saved) return saved;
+  const t = [{ id:'t1',text:'Complete one lesson today',pts:20,done:false },{ id:'t2',text:'Log a farming practice',pts:30,done:false },{ id:'t3',text:'Read a community post',pts:10,done:false },{ id:'t4',text:'Check your module progress',pts:15,done:false }];
+  S.s(_todayKey(id), t); return t;
+}
+function _checkBadges(id, user, prog) {
+  const track = _track(id);
+  const posts = S.g('ag_posts', []).filter(p => p.userId === id);
+  const cmods = S.g('ag_cmods', []);
+  const allMods = [...MODULES, ...cmods.map(m => ({ ...m, lessons: m.lessons||[] }))];
+  prog.badges.forEach(b => {
+    if (b.id==='b1' && prog.completedLessons.length >= 1) b.earned = true;
+    if (b.id==='b2' && track.filter(l => (l.practices||[]).includes('p2')).length >= 3) b.earned = true;
+    if (b.id==='b3' && user.streak >= 7) b.earned = true;
+    if (b.id==='b4' && user.points >= 500) b.earned = true;
+    if (b.id==='b5' && allMods.filter(m => m.lessons.every(l => prog.completedLessons.includes(l.id))).length >= 2) b.earned = true;
+    if (b.id==='b6' && posts.length >= 1) b.earned = true;
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Request failed');
-  return data;
+  return prog.badges;
+}
+
+/* ── apiFetch: routes to localStorage DB ─────────────────── */
+async function apiFetch(endpoint, options = {}) {
+  const method = (options.method || 'GET').toUpperCase();
+  const body = options.body || null;
+  const uid = _uid();
+
+  // Auth
+  if (endpoint === '/auth/login' && method === 'POST') {
+    const us = _users(); const u = us.find(x => x.email.toLowerCase() === body.email.toLowerCase() && x.password === body.password);
+    if (!u) throw new Error('Invalid email or password.');
+    S.s('ag_sess', u.id); return { user: u, token: 'local-' + u.id };
+  }
+  if (endpoint === '/auth/register' && method === 'POST') {
+    const us = _users(); if (us.find(x => x.email.toLowerCase() === body.email.toLowerCase())) throw new Error('Email already registered.');
+    const id = 'u' + Date.now();
+    const nu = { id, name:body.name, email:body.email, password:body.password, role:'farmer', region:body.region||'', cropType:body.cropType||'', farmSize:body.farmSize||'', experience:body.experience||'', points:0, streak:0, createdAt:new Date().toISOString() };
+    us.push(nu); _saveUsers(us); S.s(`ag_prog_${id}`, { completedLessons:[], badges:['b1','b2','b3','b4','b5','b6'].map(id => ({ id, earned:false })) }); S.s(`ag_track_${id}`, []);
+    S.s('ag_sess', id); return { user: nu, token: 'local-' + id };
+  }
+  if (endpoint.startsWith('/auth/check-username')) {
+    const name = decodeURIComponent(endpoint.split('name=')[1] || '');
+    return { available: !_users().find(u => u.name.toLowerCase() === name.toLowerCase()) };
+  }
+  if (endpoint === '/auth/change-password' && method === 'PUT') {
+    const us = _users(); const i = us.findIndex(u => u.id === uid);
+    if (us[i].password !== body.currentPassword) throw new Error('Current password is incorrect.');
+    us[i].password = body.newPassword; _saveUsers(us); return {};
+  }
+
+  // Profile
+  if (endpoint === '/profile' && method === 'GET') {
+    const u = _user(uid); if (!u) throw new Error('Not logged in.');
+    const p = _prog(uid); p.badges = _checkBadges(uid, u, p); _saveProg(uid, p);
+    return { user: u, completedLessons: p.completedLessons, todayTasks: _todayTasks(uid), badges: p.badges, activityCount: _track(uid).length };
+  }
+  if (endpoint === '/profile' && method === 'PUT') {
+    const us = _users(); const i = us.findIndex(u => u.id === uid);
+    us[i] = { ...us[i], ...body }; _saveUsers(us); return { user: us[i] };
+  }
+
+  // Progress
+  if (endpoint === '/progress/task' && method === 'POST') {
+    const tasks = _todayTasks(uid); const t = tasks.find(x => x.id === body.taskId); if (!t) throw new Error('Task not found');
+    t.done = !t.done; S.s(_todayKey(uid), tasks);
+    const us = _users(); const i = us.findIndex(u => u.id === uid);
+    us[i].points += t.done ? t.pts : -t.pts; if (us[i].points < 0) us[i].points = 0;
+    _saveUsers(us); return { done: t.done, points: us[i].points };
+  }
+  if (endpoint === '/progress/lesson' && method === 'POST') {
+    const p = _prog(uid); if (p.completedLessons.includes(body.lessonId)) return { alreadyDone: true };
+    p.completedLessons.push(body.lessonId);
+    const us = _users(); const i = us.findIndex(u => u.id === uid); us[i].points += body.pts; _saveUsers(us);
+    p.badges = _checkBadges(uid, us[i], p); _saveProg(uid, p);
+    return { alreadyDone: false, points: us[i].points, badges: p.badges };
+  }
+
+  // Tracker
+  if (endpoint === '/tracker' && method === 'GET') return { logs: _track(uid) };
+  if (endpoint === '/tracker' && method === 'POST') {
+    const pts = (body.practices||[]).length * 20; const logs = _track(uid);
+    logs.unshift({ practices: body.practices, notes: body.notes, date: body.date, pts });
+    S.s(`ag_track_${uid}`, logs);
+    const us = _users(); const i = us.findIndex(u => u.id === uid); us[i].points += pts; _saveUsers(us);
+    const p = _prog(uid); p.badges = _checkBadges(uid, us[i], p); _saveProg(uid, p);
+    return { pts, points: us[i].points, badges: p.badges };
+  }
+
+  // Posts
+  if (endpoint === '/posts' && method === 'GET') {
+    const liked = S.g(`ag_liked_${uid}`, []);
+    return { posts: S.g('ag_posts', []).map(p => ({ ...p, liked: liked.includes(p.id) })) };
+  }
+  if (endpoint === '/posts' && method === 'POST') {
+    const u = _user(uid); const posts = S.g('ag_posts', []);
+    const post = { id:'p'+Date.now(), userId:uid, author:u.name, body:body.body, tag:body.tag, time:'Just now', likes:0, isExpert:false, reply:null };
+    posts.unshift(post); S.s('ag_posts', posts);
+    const us = _users(); const i = us.findIndex(x => x.id === uid); us[i].points += 10; _saveUsers(us);
+    const p = _prog(uid); p.badges = _checkBadges(uid, us[i], p); _saveProg(uid, p);
+    return { post: { ...post, liked: false }, points: us[i].points, badges: p.badges };
+  }
+  const likeMatch = endpoint.match(/^\/posts\/(.+)\/like$/);
+  if (likeMatch && method === 'POST') {
+    const pid = likeMatch[1]; const posts = S.g('ag_posts', []); const liked = S.g(`ag_liked_${uid}`, []);
+    const post = posts.find(p => p.id === pid); if (!post) throw new Error('Post not found');
+    const isLiked = liked.includes(pid);
+    if (isLiked) { post.likes = Math.max(0, post.likes - 1); liked.splice(liked.indexOf(pid), 1); }
+    else { post.likes += 1; liked.push(pid); }
+    S.s('ag_posts', posts); S.s(`ag_liked_${uid}`, liked);
+    return { liked: !isLiked, likes: post.likes };
+  }
+  const delMatch = endpoint.match(/^\/posts\/([^/]+)$/);
+  if (delMatch && method === 'DELETE') {
+    const posts = S.g('ag_posts', []); S.s('ag_posts', posts.filter(p => !(p.id === delMatch[1] && p.userId === uid))); return {};
+  }
+
+  // Leaderboard
+  if (endpoint === '/leaderboard') return { leaderboard: _users().filter(u => u.role !== 'admin').sort((a,b) => b.points - a.points).slice(0,10).map(u => ({ id:u.id, name:u.name, region:u.region||'—', points:u.points })) };
+
+  // Modules (public)
+  if (endpoint === '/modules/') return { modules: S.g('ag_cmods', []).map(m => ({ ...m, cat:m.category, iconColor:m.icon_color, expertVerified:m.expert_verified, bg:(m.icon_color||'#2e7d32')+'22', pts:0, time:m.duration, lessons:m.lessons||[], isCustom:true })) };
+
+  // Admin
+  if (endpoint === '/admin/stats') {
+    const us = _users(); let lessons=0, practices=0, badges=0;
+    us.forEach(u => { const p = _prog(u.id); lessons += p.completedLessons.length; badges += p.badges.filter(b=>b.earned).length; practices += _track(u.id).length; });
+    return { users: us.length, lessons, practices, badges };
+  }
+  if (endpoint === '/admin/users' && method === 'GET') return { users: _users().map(u => ({ id:u.id, name:u.name, email:u.email, role:u.role, region:u.region, points:u.points })) };
+  const adminUserMatch = endpoint.match(/^\/admin\/users\/([^/]+)$/);
+  if (adminUserMatch && method === 'GET') {
+    const u = _user(adminUserMatch[1]); if (!u) throw new Error('User not found');
+    const p = _prog(u.id); return { user:u, completedLessons:p.completedLessons, badges:p.badges, activityLogs:_track(u.id), postCount:S.g('ag_posts',[]).filter(x=>x.userId===u.id).length };
+  }
+  if (endpoint === '/admin/modules' && method === 'GET') return { modules: S.g('ag_cmods', []) };
+  if (endpoint === '/admin/modules' && method === 'POST') {
+    const mods = S.g('ag_cmods', []);
+    const mod = { id:'cm'+Date.now(), title:body.title, category:body.category, difficulty:body.difficulty, icon:body.icon, icon_color:body.iconColor, description:body.description, duration:body.duration, expert_verified:body.expertVerified, lessons:[] };
+    mods.unshift(mod); S.s('ag_cmods', mods); return { module: mod };
+  }
+  const adminModMatch = endpoint.match(/^\/admin\/modules\/([^/]+)$/);
+  if (adminModMatch && method === 'PUT') {
+    const mods = S.g('ag_cmods', []); const i = mods.findIndex(m => m.id === adminModMatch[1]); if (i < 0) throw new Error('Not found');
+    mods[i] = { ...mods[i], title:body.title, category:body.category, difficulty:body.difficulty, icon:body.icon, icon_color:body.iconColor, description:body.description, duration:body.duration, expert_verified:body.expertVerified };
+    S.s('ag_cmods', mods); return { module: mods[i] };
+  }
+  if (adminModMatch && method === 'DELETE') { S.s('ag_cmods', S.g('ag_cmods',[]).filter(m => m.id !== adminModMatch[1])); return {}; }
+  const adminLessonMatch = endpoint.match(/^\/admin\/modules\/([^/]+)\/lessons\/([^/]+)$/);
+  if (adminLessonMatch && method === 'PUT') {
+    const mods = S.g('ag_cmods',[]); const mod = mods.find(m => m.id === adminLessonMatch[1]); if (!mod) throw new Error('Not found');
+    mod.lessons = (mod.lessons||[]).map(l => l.id === adminLessonMatch[2] ? { ...l, ...body } : l);
+    S.s('ag_cmods', mods); return { lesson: mod.lessons.find(l => l.id === adminLessonMatch[2]) };
+  }
+  if (adminLessonMatch && method === 'DELETE') {
+    const mods = S.g('ag_cmods',[]); const mod = mods.find(m => m.id === adminLessonMatch[1]); if (!mod) throw new Error('Not found');
+    mod.lessons = (mod.lessons||[]).filter(l => l.id !== adminLessonMatch[2]); S.s('ag_cmods', mods); return {};
+  }
+  const adminAddLesson = endpoint.match(/^\/admin\/modules\/([^/]+)\/lessons$/);
+  if (adminAddLesson && method === 'POST') {
+    const mods = S.g('ag_cmods',[]); const mod = mods.find(m => m.id === adminAddLesson[1]); if (!mod) throw new Error('Not found');
+    const lesson = { id:'l'+Date.now(), title:body.title, subtitle:body.subtitle||'', pts:body.pts||20, expertVerified:!!body.expertVerified, content:{ heading:body.title, sections:[{ type:'p', text:body.subtitle||'Lesson content.' }] } };
+    mod.lessons = [...(mod.lessons||[]), lesson]; S.s('ag_cmods', mods); return { lesson };
+  }
+
+  throw new Error('Unknown endpoint: ' + endpoint);
 }
 
 /* ── Static content data (modules/practices unchanged) ─── */
@@ -421,8 +601,7 @@ function AuthPage({ onLogin }) {
     setNameStatus('checking');
     const timer = setTimeout(async () => {
       try {
-        const res  = await fetch(`${API}/auth/check-username?name=${encodeURIComponent(trimmed)}`);
-        const data = await res.json();
+        const data = await apiFetch(`/auth/check-username?name=${encodeURIComponent(trimmed)}`);
         setNameStatus(data.available ? 'available' : 'taken');
       } catch {
         setNameStatus('idle');
@@ -447,7 +626,6 @@ function AuthPage({ onLogin }) {
     setErr(''); setLoading(true);
     try {
       const data = await apiFetch('/auth/login', { method: 'POST', body: { email: form.email, password: form.password } });
-      localStorage.setItem('agrigrow_token', data.token);
       onLogin(data.user);
     } catch (e) {
       setErr(e.message);
@@ -468,7 +646,6 @@ function AuthPage({ onLogin }) {
     setErr(''); setLoading(true);
     try {
       const data = await apiFetch('/auth/register', { method: 'POST', body: form });
-      localStorage.setItem('agrigrow_token', data.token);
       onLogin(data.user);
     } catch (e) {
       setErr(e.message);
@@ -1730,17 +1907,17 @@ function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [initialLoading, setInitialLoading] = useState(false);
 
-  // On mount — check if token exists and load profile
+  // On mount — check if session exists and load profile
   useEffect(() => {
-    const token = localStorage.getItem('agrigrow_token');
-    if (token) {
+    const sess = localStorage.getItem('ag_sess');
+    if (sess) {
       setInitialLoading(true);
       apiFetch('/profile').then(data => {
         setUser(data.user);
         setAppState({ points: data.user.points, streak: data.user.streak, completedLessons: data.completedLessons, todayTasks: data.todayTasks, badges: data.badges });
         setActivityCount(data.activityCount);
       }).catch(() => {
-        localStorage.removeItem('agrigrow_token');
+        localStorage.removeItem('ag_sess');
       }).finally(() => setInitialLoading(false));
     }
   }, []);
@@ -1759,7 +1936,7 @@ function App() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('agrigrow_token');
+    localStorage.removeItem('ag_sess');
     setUser(null);
     setPage('home');
     setOpenMod(null);
