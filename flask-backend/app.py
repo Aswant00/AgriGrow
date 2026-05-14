@@ -21,7 +21,7 @@
 # ─────────────────────────────────────────────────────────────────────────────
 
 import os
-from flask import Flask, jsonify
+from flask import Flask, jsonify, send_from_directory
 from flask_cors import CORS
 from dotenv import load_dotenv
 
@@ -63,6 +63,17 @@ from datetime import datetime
 def health():
     return jsonify({'status': 'ok', 'message': 'AgriGrow API is running!',
                     'time': datetime.now().isoformat()})
+
+# ── Serve Frontend ───────────────────────────────────────────────────────────
+@app.route('/')
+def serve_root():
+    # Serve the main HTML file when visiting http://localhost:5000/
+    return send_from_directory('..', 'AgriGrow.html')
+
+@app.route('/<path:filename>')
+def serve_static(filename):
+    # Serve any other static files from the parent directory
+    return send_from_directory('..', filename)
 
 # ── 404 handler ──────────────────────────────────────────────────────────────
 @app.errorhandler(404)
