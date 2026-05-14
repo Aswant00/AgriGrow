@@ -1,7 +1,4 @@
-# routes/progress.py — Lesson Completion and Daily Tasks
-# GET  /api/progress        → User's points, streak, lessons, badges
-# POST /api/progress/lesson → Mark a lesson complete and award points
-# POST /api/progress/task   → Toggle a daily task done/undone
+# Progress tracking and daily tasks
 
 from datetime import datetime
 from flask import Blueprint, request, jsonify, g
@@ -12,7 +9,7 @@ progress_bp = Blueprint('progress', __name__)
 
 
 def check_and_award_badges(user_id):
-    """Check badge criteria and unlock any newly earned badges."""
+    """Unlock earned badges."""
     user    = db_get('SELECT points FROM users WHERE id = %s', (user_id,))
     lessons = db_all('SELECT lesson_id FROM completed_lessons WHERE user_id = %s', (user_id,))
 
@@ -24,7 +21,7 @@ def check_and_award_badges(user_id):
         db_run("UPDATE badges SET earned=1 WHERE user_id=%s AND badge_id='b5' AND earned=0", (user_id,))
 
 
-# GET /api/progress
+# Get progress
 @progress_bp.route('/', methods=['GET'])
 @require_auth
 def get_progress():
@@ -45,7 +42,7 @@ def get_progress():
         return jsonify({'error': 'Failed to load progress.'}), 500
 
 
-# POST /api/progress/lesson
+# Complete lesson
 @progress_bp.route('/lesson', methods=['POST'])
 @require_auth
 def complete_lesson():
@@ -86,7 +83,7 @@ def complete_lesson():
         return jsonify({'error': 'Failed to save lesson progress.'}), 500
 
 
-# POST /api/progress/task
+# Toggle task
 @progress_bp.route('/task', methods=['POST'])
 @require_auth
 def toggle_task():

@@ -1,6 +1,4 @@
-# routes/tracker.py — Practice Activity Logging
-# GET  /api/tracker  → All of this user's past practice logs
-# POST /api/tracker  → Save a new practice log and award points
+# Activity tracking and logging
 
 import json
 from datetime import datetime
@@ -11,7 +9,7 @@ from middleware.auth_middleware import require_auth
 tracker_bp = Blueprint('tracker', __name__)
 
 
-# GET /api/tracker
+# Get activity logs
 @tracker_bp.route('/', methods=['GET'])
 @require_auth
 def get_logs():
@@ -39,7 +37,7 @@ def get_logs():
         return jsonify({'error': 'Failed to load activity logs.'}), 500
 
 
-# POST /api/tracker
+# Log new activity
 @tracker_bp.route('/', methods=['POST'])
 @require_auth
 def log_practice():

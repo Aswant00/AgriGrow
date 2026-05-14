@@ -1,8 +1,4 @@
-# routes/community.py — Forum Posts and Likes
-# GET    /api/posts          → All forum posts (newest first)
-# POST   /api/posts          → Create a new forum post
-# DELETE /api/posts/<id>     → Delete a post (owner only)
-# POST   /api/posts/<id>/like → Toggle a like on/off
+# Forum posts and interactions
 
 from datetime import datetime, timezone
 from flask import Blueprint, request, jsonify, g
@@ -31,7 +27,7 @@ def format_time(dt_value):
     return f"{days} days ago"
 
 
-# GET /api/posts
+# Get posts
 @community_bp.route('/', methods=['GET'])
 @require_auth
 def get_posts():
@@ -67,7 +63,7 @@ def get_posts():
         return jsonify({'error': 'Failed to load posts.'}), 500
 
 
-# POST /api/posts
+# Create post
 @community_bp.route('/', methods=['POST'])
 @require_auth
 def create_post():
@@ -119,7 +115,7 @@ def create_post():
         return jsonify({'error': 'Failed to create post.'}), 500
 
 
-# DELETE /api/posts/<id>
+# Delete post
 @community_bp.route('/<int:post_id>', methods=['DELETE'])
 @require_auth
 def delete_post(post_id):
@@ -139,7 +135,7 @@ def delete_post(post_id):
         return jsonify({'error': 'Failed to delete post.'}), 500
 
 
-# POST /api/posts/<id>/like
+# Toggle like
 @community_bp.route('/<int:post_id>/like', methods=['POST'])
 @require_auth
 def toggle_like(post_id):

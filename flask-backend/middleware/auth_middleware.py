@@ -1,11 +1,4 @@
-# middleware/auth_middleware.py — JWT Token Verification
-# Extracts and verifies the Bearer token from the Authorization header.
-# Attaches user_id and user_role to Flask's g object for use in route handlers.
-#
-# Usage in route files:
-#   @bp.route('/profile')
-#   @require_auth
-#   def profile(): ...
+# JWT Token Verification Middleware
 
 import os
 import jwt
@@ -14,7 +7,7 @@ from flask import request, jsonify, g
 
 
 def require_auth(f):
-    """Decorator that protects a route with JWT verification."""
+    """JWT verification decorator."""
     @wraps(f)
     def decorated(*args, **kwargs):
         auth_header = request.headers.get('Authorization', '')
@@ -36,7 +29,7 @@ def require_auth(f):
 
 
 def admin_only(f):
-    """Decorator that blocks non-admin users (must be used after @require_auth)."""
+    """Admin-only access decorator."""
     @wraps(f)
     def decorated(*args, **kwargs):
         if g.user_role != 'admin':

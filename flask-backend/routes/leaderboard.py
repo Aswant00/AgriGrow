@@ -1,5 +1,4 @@
-# routes/leaderboard.py — Top Users by Points
-# GET /api/leaderboard  → Top 20 users ranked by points (admins excluded)
+# Leaderboard rankings
 
 from flask import Blueprint, jsonify
 from db.database import db_all
@@ -8,7 +7,7 @@ from middleware.auth_middleware import require_auth
 leaderboard_bp = Blueprint('leaderboard', __name__)
 
 
-# GET /api/leaderboard
+# Get leaderboard
 @leaderboard_bp.route('/', methods=['GET'])
 @require_auth
 def get_leaderboard():

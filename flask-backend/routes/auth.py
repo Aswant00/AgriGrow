@@ -1,6 +1,4 @@
-# routes/auth.py — User Registration and Login
-# POST /api/auth/register  → Create a new user account
-# POST /api/auth/login     → Check credentials and return a JWT token
+# User authentication routes
 
 import os
 import re
@@ -13,7 +11,7 @@ from middleware.auth_middleware import require_auth
 
 auth_bp = Blueprint('auth', __name__)
 
-# ── Validation helpers ────────────────────────────────────────────────────────
+# Validation helpers
 
 EMAIL_RE = re.compile(r'^[^\s@]+@[^\s@]+\.[^\s@]+$')
 
@@ -23,13 +21,7 @@ def is_valid_email(email: str) -> bool:
 
 
 def is_strong_password(password: str) -> bool:
-    """Return True when the password satisfies all strength criteria:
-    - At least 8 characters
-    - At least one uppercase letter
-    - At least one lowercase letter
-    - At least one digit
-    - At least one special symbol
-    """
+    """Check if password meets strength criteria."""
     if len(password) < 8:
         return False
     if not re.search(r'[A-Z]', password):
@@ -69,7 +61,7 @@ def safe_user(user):
     }
 
 
-# POST /api/auth/register
+# Register user
 @auth_bp.route('/register', methods=['POST'])
 def register():
     try:
@@ -114,7 +106,7 @@ def register():
         return jsonify({'error': 'Registration failed. Please try again.'}), 500
 
 
-# GET /api/auth/check-username?name=<name>
+# Check username availability
 @auth_bp.route('/check-username', methods=['GET'])
 def check_username():
     """Case-insensitive lookup — returns {available: true/false}."""
@@ -125,7 +117,7 @@ def check_username():
     return jsonify({'available': existing is None})
 
 
-# PUT /api/auth/change-password
+# Change password
 @auth_bp.route('/change-password', methods=['PUT'])
 @require_auth
 def change_password():
@@ -158,7 +150,7 @@ def change_password():
         return jsonify({'error': 'Failed to update password. Please try again.'}), 500
 
 
-# POST /api/auth/login
+# Login user
 @auth_bp.route('/login', methods=['POST'])
 def login():
     try:

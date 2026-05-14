@@ -9,18 +9,18 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
   <style>
-    /* ── Reset & Base ── */
+    /* Reset & Base */
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Segoe UI', sans-serif; background: #f5f5f5; color: #333; }
 
     .app { max-width: 480px; margin: 0 auto; min-height: 100vh; background: #fff; }
 
-    /* ── Top bar ── */
+    /* Top bar */
     .top-bar { background: #2e7d32; color: #fff; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; }
     .top-bar h2 { font-size: 17px; display: flex; align-items: center; gap: 6px; }
     .top-bar-right { display: flex; align-items: center; gap: 8px; }
 
-    /* ── Buttons ── */
+    /* Buttons */
     .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; padding: 10px 16px; }
     .btn-green  { background: #2e7d32; color: #fff; width: 100%; padding: 13px; font-size: 15px; }
     .btn-green:hover { background: #1b5e20; }
@@ -32,16 +32,16 @@
     .btn-icon { background: rgba(255,255,255,.15); border: none; border-radius: 50%; width: 34px; height: 34px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #fff; position: relative; }
     .back-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; background: #f5f5f5; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; cursor: pointer; color: #555; font-weight: 600; margin-bottom: 14px; }
 
-    /* ── Page ── */
+    /* Page */
     .page { padding: 16px; padding-bottom: 80px; }
     .sec-title { font-size: 14px; font-weight: 700; color: #333; margin: 16px 0 10px; display: flex; align-items: center; gap: 6px; }
 
-    /* ── Loading ── */
+    /* Loading */
     .loading-wrap { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; gap: 12px; color: #888; font-size: 13px; }
     .spinner { width: 32px; height: 32px; border: 3px solid #e0e0e0; border-top-color: #2e7d32; border-radius: 50%; animation: spin .7s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* ── Auth ── */
+    /* Auth */
     .auth-wrap { padding: 32px 20px; min-height: 100vh; display: flex; flex-direction: column; justify-content: center; }
     .auth-logo  { text-align: center; margin-bottom: 28px; }
     .auth-logo-icon { background: #e8f5e9; width: 72px; height: 72px; border-radius: 20px; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; }
@@ -52,7 +52,7 @@
     .tab-btn.active { background: #2e7d32; color: #fff; }
     .hint { font-size: 12px; color: #888; text-align: center; margin-top: 12px; }
 
-    /* ── Forms ── */
+    /* Forms */
     .fg { margin-bottom: 14px; }
     .fg label { display: block; font-size: 13px; font-weight: 600; color: #444; margin-bottom: 5px; }
     .fg input, .fg select, .fg textarea { width: 100%; padding: 11px 13px; border: 1px solid #ccc; border-radius: 8px; font-size: 14px; outline: none; background: #fff; font-family: inherit; }
@@ -62,7 +62,7 @@
     .fg textarea { resize: vertical; }
     .field-err { font-size: 11px; color: #c62828; margin-top: 4px; display: flex; align-items: center; gap: 4px; }
 
-    /* ── Password strength meter ── */
+    /* Password strength meter */
     .pw-strength { margin-top: 6px; }
     .pw-strength-bar { height: 4px; border-radius: 4px; background: #e0e0e0; margin-bottom: 4px; }
     .pw-strength-fill { height: 100%; border-radius: 4px; transition: width .3s, background .3s; }
@@ -71,32 +71,32 @@
     .pw-hint.met  { background: #e8f5e9; color: #2e7d32; }
     .pw-hint.unmet{ background: #f5f5f5; color: #aaa; }
 
-    /* ── Alerts ── */
+    /* Alerts */
     .alert { padding: 10px 12px; border-radius: 8px; font-size: 13px; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
     .alert-error   { background: #ffebee; border: 1px solid #ef9a9a; color: #c62828; }
     .alert-success { background: #e8f5e9; border: 1px solid #a5d6a7; color: #2e7d32; }
 
-    /* ── Progress bar ── */
+    /* Progress bar */
     .prog-wrap { background: #e0e0e0; border-radius: 100px; height: 6px; }
     .prog-fill { height: 100%; border-radius: 100px; background: #2e7d32; transition: width .3s; }
 
-    /* ── Badges ── */
+    /* Badges */
     .badge { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 20px; }
     .badge-easy   { background: #e8f5e9; color: #2e7d32; }
     .badge-medium { background: #fff8e1; color: #f57c00; }
     .badge-hard   { background: #fce4ec; color: #c62828; }
     .badge-expert { background: #e3f2fd; color: #1565c0; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 20px; display: inline-flex; align-items: center; gap: 3px; }
 
-    /* ── Cards ── */
+    /* Cards */
     .card { background: #f9f9f9; border: 1px solid #e0e0e0; border-radius: 10px; padding: 14px; margin-bottom: 12px; }
 
-    /* ── Info rows ── */
+    /* Info rows */
     .info-row { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; border-bottom: 1px solid #eee; font-size: 13px; }
     .info-row:last-child { border-bottom: none; }
     .info-row .lbl { color: #888; display: flex; align-items: center; gap: 6px; }
     .info-row .val { font-weight: 600; }
 
-    /* ── Welcome / stats ── */
+    /* Welcome / stats */
     .welcome-card { background: linear-gradient(135deg, #2e7d32, #43a047); color: #fff; border-radius: 12px; padding: 18px; margin-bottom: 16px; }
     .welcome-card .greet { font-size: 13px; opacity: .8; margin-bottom: 4px; }
     .welcome-card h2 { font-size: 20px; font-weight: 700; }
@@ -108,7 +108,7 @@
     .stat-box .sv { font-size: 22px; font-weight: 700; color: #2e7d32; }
     .stat-box .sl { font-size: 11px; color: #888; margin-top: 3px; }
 
-    /* ── Daily tasks ── */
+    /* Daily tasks */
     .task-row  { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
     .task-row:last-child { border-bottom: none; }
     .task-check { width: 22px; height: 22px; border: 2px solid #2e7d32; border-radius: 5px; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; color: #fff; }
@@ -117,7 +117,7 @@
     .task-text.done { text-decoration: line-through; color: #aaa; }
     .task-pts { font-size: 11px; font-weight: 700; color: #f57c00; }
 
-    /* ── Module cards ── */
+    /* Module cards */
     .module-card { border: 1px solid #ddd; border-radius: 10px; overflow: hidden; margin-bottom: 12px; cursor: pointer; }
     .module-card:hover { border-color: #2e7d32; background: #f9fff9; }
     .mc-header { padding: 14px; display: flex; align-items: center; gap: 12px; }
@@ -129,12 +129,12 @@
     .mc-meta   { display: flex; gap: 12px; font-size: 12px; color: #888; margin-bottom: 6px; flex-wrap: wrap; }
     .mc-meta-pts { color: #f57c00; font-weight: 700; display: flex; align-items: center; gap: 3px; }
 
-    /* ── Module banner ── */
+    /* Module banner */
     .mod-banner { background: linear-gradient(135deg, #2e7d32, #43a047); color: #fff; border-radius: 12px; padding: 18px; margin-bottom: 16px; }
     .mod-banner h2 { font-size: 18px; font-weight: 700; margin: 8px 0 6px; }
     .mod-banner .meta { display: flex; gap: 12px; font-size: 12px; opacity: .85; flex-wrap: wrap; }
 
-    /* ── Lessons ── */
+    /* Lessons */
     .lesson-item { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid #e0e0e0; border-radius: 10px; margin-bottom: 8px; cursor: pointer; }
     .lesson-item:hover { border-color: #2e7d32; background: #f1f8e9; }
     .l-num { width: 32px; height: 32px; border-radius: 8px; background: #e8f5e9; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: #2e7d32; flex-shrink: 0; }
@@ -152,7 +152,7 @@
     .tip-block { background: #fffde7; border-left: 3px solid #f9a825; padding: 10px 12px; border-radius: 0 8px 8px 0; font-size: 13px; color: #555; margin: 10px 0; line-height: 1.6; display: flex; gap: 8px; align-items: flex-start; }
     .expert-box { background: #e3f2fd; border: 1px solid #90caf9; border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; font-size: 12px; color: #1565c0; font-weight: 600; }
 
-    /* ── Quiz ── */
+    /* Quiz */
     .quiz-box { background: #f3e5f5; border: 1px solid #ce93d8; border-radius: 10px; padding: 14px; }
     .quiz-q   { font-size: 14px; font-weight: 600; color: #4a148c; margin-bottom: 10px; display: flex; gap: 7px; align-items: flex-start; }
     .quiz-opts { display: flex; flex-direction: column; gap: 6px; }
@@ -164,7 +164,7 @@
     .quiz-result.no { background: #ffebee; color: #c62828; }
     .lesson-footer { display: flex; gap: 10px; margin-top: 12px; }
 
-    /* ── Tracker ── */
+    /* Tracker */
     .prac-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
     .prac-chip { border: 1px solid #ccc; border-radius: 8px; padding: 10px; font-size: 12px; color: #555; background: #fff; cursor: pointer; text-align: center; }
     .prac-chip.sel { background: #e8f5e9; border-color: #2e7d32; color: #1b5e20; font-weight: 600; }
@@ -179,7 +179,7 @@
     .log-meta { font-size: 12px; color: #888; margin-top: 2px; }
     .log-pts  { margin-left: auto; font-size: 12px; font-weight: 700; color: #f57c00; flex-shrink: 0; }
 
-    /* ── Guide modal ── */
+    /* Guide modal */
     .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 200; display: flex; align-items: flex-end; }
     .modal-box { background: #fff; border-radius: 16px 16px 0 0; width: 100%; max-width: 480px; margin: 0 auto; max-height: 85vh; overflow-y: auto; padding: 20px; }
     .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
@@ -191,7 +191,7 @@
     .step-text  { font-size: 13px; color: #444; line-height: 1.6; }
     .guide-tip  { background: #fffde7; border-left: 3px solid #f9a825; padding: 10px 12px; border-radius: 0 8px 8px 0; font-size: 13px; color: #555; margin-top: 14px; line-height: 1.6; }
 
-    /* ── Community ── */
+    /* Community */
     .inner-tabs { display: flex; border-bottom: 2px solid #e0e0e0; margin-bottom: 14px; }
     .inner-tab { flex: 1; padding: 10px 8px; font-size: 13px; font-weight: 600; color: #888; border: none; background: none; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; display: flex; align-items: center; justify-content: center; gap: 5px; }
     .inner-tab.active { color: #2e7d32; border-bottom-color: #2e7d32; }
@@ -215,7 +215,7 @@
     .fp-reply  { background: #f9f9f9; border-left: 3px solid #2e7d32; padding: 10px 12px; border-radius: 0 8px 8px 0; margin-top: 8px; font-size: 12px; color: #444; line-height: 1.6; }
     .rep-name  { font-weight: 700; color: #1565c0; margin-bottom: 3px; font-size: 12px; }
 
-    /* ── Leaderboard ── */
+    /* Leaderboard */
     .lb-card { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid #e0e0e0; border-radius: 10px; margin-bottom: 8px; }
     .lb-card.me { background: #e8f5e9; border-color: #2e7d32; }
     .lb-rank { font-size: 15px; font-weight: 700; color: #888; width: 24px; text-align: center; flex-shrink: 0; }
@@ -223,7 +223,7 @@
     .lb-av  { width: 36px; height: 36px; background: #c8e6c9; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #2e7d32; }
     .lb-pts { margin-left: auto; font-weight: 700; color: #2e7d32; font-size: 14px; display: flex; align-items: center; gap: 3px; }
 
-    /* ── Profile ── */
+    /* Profile */
     .prof-top { background: linear-gradient(135deg, #2e7d32, #43a047); color: #fff; border-radius: 12px; padding: 20px; margin-bottom: 16px; display: flex; align-items: center; gap: 14px; }
     .prof-av  { width: 60px; height: 60px; background: rgba(255,255,255,.25); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 700; flex-shrink: 0; }
     .prof-name { font-size: 18px; font-weight: 700; }
@@ -234,7 +234,7 @@
     .bdg-name { font-size: 11px; font-weight: 600; color: #555; }
     .bdg-desc { font-size: 10px; color: #999; }
 
-    /* ── Settings ── */
+    /* Settings */
     .settings-section-title { font-size: 11px; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
     .settings-item { display: flex; align-items: center; justify-content: space-between; padding: 13px 14px; background: #f9f9f9; border: 1px solid #e0e0e0; border-radius: 10px; margin-bottom: 6px; cursor: pointer; }
     .settings-item:hover { background: #f1f8e9; }
@@ -247,19 +247,19 @@
     .toggle-knob { position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: left .2s; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
     .toggle.on .toggle-knob { left: 20px; }
 
-    /* ── Admin ── */
+    /* Admin */
     .admin-banner { background: linear-gradient(135deg, #1565c0, #1976d2); color: #fff; border-radius: 12px; padding: 16px; margin-bottom: 16px; display: flex; align-items: center; gap: 12px; }
     .analytics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
     .analytics-box  { background: #f9f9f9; border: 1px solid #e0e0e0; border-radius: 10px; padding: 14px; text-align: center; }
     .analytics-val  { font-size: 24px; font-weight: 700; color: #1565c0; }
     .analytics-lbl  { font-size: 11px; color: #888; margin-top: 3px; }
 
-    /* ── Bottom nav ── */
+    /* Bottom nav */
     .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; background: #fff; border-top: 1px solid #ddd; display: flex; z-index: 10; }
     .bn-item { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 8px 4px; cursor: pointer; font-size: 9px; color: #999; border: none; background: none; gap: 2px; }
     .bn-item.active { color: #2e7d32; }
 
-    /* ── Notifications ── */
+    /* Notifications */
     .notif-panel  { position: fixed; top: 52px; left: 0; right: 0; max-width: 480px; margin: 0 auto; background: #fff; border-bottom: 1px solid #ddd; z-index: 50; box-shadow: 0 4px 16px rgba(0,0,0,.12); max-height: 70vh; overflow-y: auto; }
     .notif-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid #eee; position: sticky; top: 0; background: #fff; }
     .notif-item   { display: flex; gap: 12px; padding: 12px 16px; border-bottom: 1px solid #f0f0f0; }
@@ -267,10 +267,10 @@
     .notif-text { font-size: 13px; color: #333; }
     .notif-time { font-size: 11px; color: #aaa; margin-top: 3px; }
 
-    /* ── Toast ── */
+    /* Toast */
     .toast { position: fixed; bottom: 72px; left: 50%; transform: translateX(-50%); background: #1b5e20; color: #fff; padding: 10px 20px; border-radius: 8px; font-size: 13px; font-weight: 600; z-index: 300; white-space: nowrap; box-shadow: 0 4px 12px rgba(0,0,0,.2); display: flex; align-items: center; gap: 8px; }
 
-    /* ── Icon ── */
+    /* Icon */
     .mi { font-family: 'Material Icons'; font-style: normal; font-weight: normal; line-height: 1; display: inline-flex; align-items: center; user-select: none; vertical-align: middle; }
   </style>
 </head>
@@ -279,7 +279,7 @@
 <script type="text/babel">
 const { useState, useEffect, useCallback } = React;
 
-/* ── localStorage DB ────────────────────────────────────── */
+/* localStorage DB */
 const S = {
   g: (k, d) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } },
   s: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
@@ -334,7 +334,7 @@ function _checkBadges(id, user, prog) {
   return prog.badges;
 }
 
-/* ── apiFetch: routes to localStorage DB ─────────────────── */
+/* apiFetch: routes to localStorage DB */
 async function apiFetch(endpoint, options = {}) {
   const method = (options.method || 'GET').toUpperCase();
   const body = options.body || null;
@@ -480,7 +480,7 @@ async function apiFetch(endpoint, options = {}) {
   throw new Error('Unknown endpoint: ' + endpoint);
 }
 
-/* ── Static content data (modules/practices unchanged) ─── */
+/* Static content data (modules/practices unchanged) */
 const MODULES = [
   { id: 1, icon: 'eco', title: 'Soil Health & Composting', cat: 'Soil Management', difficulty: 'Beginner', iconColor: '#2e7d32', bg: '#e8f5e9', pts: 150, time: '45 min', expertVerified: true,
     desc: 'Learn to improve soil health using compost and natural amendments.',
@@ -542,7 +542,7 @@ const NAV = [
   { id: 'profile',   icon: 'person',     label: 'Profile'   },
 ];
 
-/* ── Shared components ───────────────────────────────────── */
+/* Shared components */
 function Icon({ name, size = 20, color }) {
   return <span className="mi" style={{ fontSize: size, color: color || 'currentColor' }}>{name}</span>;
 }
@@ -560,7 +560,7 @@ function Loading() {
   return <div className="loading-wrap"><div className="spinner" /><span>Loading...</span></div>;
 }
 
-/* ── Validation helpers ──────────────────────────────────── */
+/* Validation helpers */
 function validateEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 }
@@ -581,7 +581,7 @@ function pwStrength(checks) {
   return { pct: 100, color: '#43a047', label: 'Strong' };
 }
 
-/* ── Auth page ───────────────────────────────────────────── */
+/* Auth page */
 function AuthPage({ onLogin }) {
   const [tab, setTab] = useState('login');
   const [form, setForm] = useState({ name: '', email: '', password: '', region: '', farmSize: '', cropType: '', experience: '' });
@@ -791,7 +791,7 @@ function AuthPage({ onLogin }) {
   );
 }
 
-/* ── Dashboard ───────────────────────────────────────────── */
+/* Dashboard */
 function Dashboard({ user, appState, onToggleTask }) {
   const { points, streak, completedLessons, todayTasks, badges } = appState;
   const doneTasks = todayTasks.filter(t => t.done).length;
@@ -847,7 +847,7 @@ function Dashboard({ user, appState, onToggleTask }) {
   );
 }
 
-/* ── Modules page ────────────────────────────────────────── */
+/* Modules page */
 function ModulesPage({ appState, onOpen }) {
   const [customMods, setCustomMods] = useState([]);
   useEffect(() => {
@@ -996,7 +996,7 @@ function LessonView({ lesson, mod, appState, onCompleteLesson, onBack, onNext })
   );
 }
 
-/* ── Guide modal ─────────────────────────────────────────── */
+/* Guide modal */
 function GuideModal({ practice, onClose }) {
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -1017,7 +1017,7 @@ function GuideModal({ practice, onClose }) {
   );
 }
 
-/* ── Tracker page ────────────────────────────────────────── */
+/* Tracker page */
 function TrackerPage({ appState, onLogPractice, toast }) {
   const [sel, setSel] = useState([]);
   const [notes, setNotes] = useState('');
@@ -1086,7 +1086,7 @@ function TrackerPage({ appState, onLogPractice, toast }) {
   );
 }
 
-/* ── Community page ──────────────────────────────────────── */
+/* Community page */
 function CommunityPage({ user, appState, onCommunityPost, toast }) {
   const [tab, setTab] = useState('forum');
   const [posts, setPosts] = useState([]);
@@ -1211,7 +1211,7 @@ function CommunityPage({ user, appState, onCommunityPost, toast }) {
   );
 }
 
-/* ── Profile page ────────────────────────────────────────── */
+/* Profile page */
 function ProfilePage({ user, appState, activityCount, onSettings }) {
   const { points, streak, completedLessons, badges } = appState;
   const level = Math.floor(points / 200) + 1;
@@ -1263,7 +1263,7 @@ function ProfilePage({ user, appState, activityCount, onSettings }) {
   );
 }
 
-/* ── Settings page ───────────────────────────────────────── */
+/* Settings page */
 function SettingsPage({ user, onBack, onSaveProfile, onLogout }) {
   const [sub, setSub] = useState(null);
   const [form, setForm] = useState({ name: user.name, email: user.email, region: user.region || '', farmSize: user.farmSize || '', cropType: user.cropType || '', experience: user.experience || '' });
@@ -1427,7 +1427,7 @@ function SettingsPage({ user, onBack, onSaveProfile, onLogout }) {
   );
 }
 
-/* ── Admin panel ─────────────────────────────────────────── */
+/* Admin panel */
 function AdminPanel({ adminUser }) {
   const [tab, setTab]           = useState('analytics');
   const [stats, setStats]       = useState(null);
@@ -1693,7 +1693,7 @@ function AdminPanel({ adminUser }) {
         <button className={`inner-tab ${tab === 'content' ? 'active' : ''}`} onClick={() => setTab('content')}><Icon name="description" size={14} />Content</button>
       </div>
 
-      {/* ── Analytics tab ── */}
+      {/* Analytics tab */}
       {tab === 'analytics' && (<>
         <div className="analytics-grid">
           {[
@@ -1720,7 +1720,7 @@ function AdminPanel({ adminUser }) {
         ))}</div>
       </>)}
 
-      {/* ── Users tab ── */}
+      {/* Users tab */}
       {tab === 'users' && (<>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
           <div className="sec-title" style={{ margin: 0 }}><Icon name="group" size={15} color="#2e7d32" />All Users ({users.length})</div>
@@ -1746,7 +1746,7 @@ function AdminPanel({ adminUser }) {
         ))}
       </>)}
 
-      {/* ── Content tab ── */}
+      {/* Content tab */}
       {tab === 'content' && (<>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
           <div className="sec-title" style={{ margin: 0 }}><Icon name="description" size={15} color="#2e7d32" />Modules</div>
@@ -1889,7 +1889,7 @@ function AdminPanel({ adminUser }) {
   );
 }
 
-/* ── Root App ────────────────────────────────────────────── */
+/* Root App */
 function App() {
   const [user, setUser] = useState(null);
   const [page, setPage] = useState('home');

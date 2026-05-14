@@ -1,5 +1,4 @@
-# routes/modules.py — Public (auth-required) Modules Endpoint
-# GET /api/modules  →  Returns all admin-created custom modules with their lessons
+# Public modules endpoint
 
 from flask import Blueprint, jsonify
 from db.database import db_get, db_all
@@ -9,7 +8,7 @@ modules_bp = Blueprint('modules', __name__)
 
 
 def _format_module(m):
-    """Format a custom_modules row plus its lessons for the frontend."""
+    """Format custom modules for frontend."""
     lessons = db_all(
         'SELECT * FROM custom_module_lessons WHERE module_id = %s ORDER BY sort_order, id',
         (m['id'],)
@@ -52,7 +51,7 @@ def _format_module(m):
     }
 
 
-# GET /api/modules
+# Get all modules
 @modules_bp.route('/', methods=['GET'])
 @require_auth
 def get_custom_modules():

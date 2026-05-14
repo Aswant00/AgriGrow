@@ -1,5 +1,4 @@
-# db/database.py
-# Connects Flask to MySQL and provides helper functions for queries.
+# MySQL connection and query helpers.
 
 import os
 import pymysql
@@ -8,9 +7,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# ── Connection pool (simple persistent connection per request) ────────────────
-# PyMySQL doesn't have a built-in pool, so we create a new connection each time
-# using a helper. For a small project this is perfectly fine.
+# Database connection helper
 
 def get_connection():
     """Open and return a new MySQL connection."""
@@ -23,7 +20,7 @@ def get_connection():
         autocommit=True,
     )
 
-# ── Test connection on import ─────────────────────────────────────────────────
+# Test connection
 try:
     _test = get_connection()
     _test.close()
@@ -34,9 +31,7 @@ except Exception as e:
     raise SystemExit(1)
 
 
-# ── Helper: db_run ────────────────────────────────────────────────────────────
-# Use for INSERT, UPDATE, DELETE.
-# Returns a dict with lastID and changes (affected rows).
+# Execute INSERT/UPDATE/DELETE queries
 def db_run(sql, params=()):
     conn = get_connection()
     try:
@@ -47,9 +42,7 @@ def db_run(sql, params=()):
         conn.close()
 
 
-# ── Helper: db_get ────────────────────────────────────────────────────────────
-# Use for SELECT that returns ONE row.
-# Returns a dict or None if not found.
+# Fetch a single row
 def db_get(sql, params=()):
     conn = get_connection()
     try:
@@ -60,9 +53,7 @@ def db_get(sql, params=()):
         conn.close()
 
 
-# ── Helper: db_all ────────────────────────────────────────────────────────────
-# Use for SELECT that returns MULTIPLE rows.
-# Returns a list of dicts.
+# Fetch multiple rows
 def db_all(sql, params=()):
     conn = get_connection()
     try:
@@ -73,7 +64,7 @@ def db_all(sql, params=()):
         conn.close()
 
 
-# ── Seed helpers: pre-populate data for new users ────────────────────────────
+# Seed new user data
 ALL_BADGES = ['b1', 'b2', 'b3', 'b4', 'b5', 'b6']
 
 def init_badges_for_user(user_id):

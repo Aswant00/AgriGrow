@@ -1,6 +1,4 @@
-# routes/profile.py — Get and Update User Profile
-# GET /api/profile  → Returns logged-in user's full profile data
-# PUT /api/profile  → Updates name, email, region, etc.
+# Profile routes
 
 from datetime import datetime
 from flask import Blueprint, request, jsonify, g
@@ -16,7 +14,7 @@ TASK_LABELS = {
 }
 
 
-# GET /api/profile
+# Get profile
 @profile_bp.route('/', methods=['GET'])
 @require_auth
 def get_profile():
@@ -68,7 +66,7 @@ def get_profile():
         return jsonify({'error': 'Failed to load profile.'}), 500
 
 
-# PUT /api/profile
+# Update profile
 @profile_bp.route('/', methods=['PUT'])
 @require_auth
 def update_profile():

@@ -1,15 +1,4 @@
-# routes/admin.py — Admin-Only Endpoints
-# GET    /api/admin/stats                          → Platform analytics
-# GET    /api/admin/users                          → All registered users
-# GET    /api/admin/users/<id>                     → Full profile of one user
-# GET    /api/admin/modules                        → Custom learning modules
-# POST   /api/admin/modules                        → Create a new module
-# PUT    /api/admin/modules/<id>                   → Edit a module
-# DELETE /api/admin/modules/<id>                   → Delete a module
-# GET    /api/admin/modules/<id>/lessons           → List lessons in a module
-# POST   /api/admin/modules/<id>/lessons           → Add a lesson to a module
-# PUT    /api/admin/modules/<id>/lessons/<lid>     → Edit a lesson
-# DELETE /api/admin/modules/<id>/lessons/<lid>     → Delete a lesson
+# Admin-only endpoints
 
 import json
 from flask import Blueprint, request, jsonify, g
@@ -41,7 +30,7 @@ def _module_with_lessons(m):
     }
 
 
-# GET /api/admin/stats
+# Get platform stats
 @admin_bp.route('/stats', methods=['GET'])
 @require_auth
 @admin_only
@@ -64,7 +53,7 @@ def get_stats():
         return jsonify({'error': 'Failed to load stats.'}), 500
 
 
-# GET /api/admin/users
+# Get all users
 @admin_bp.route('/users', methods=['GET'])
 @require_auth
 @admin_only
@@ -87,7 +76,7 @@ def get_users():
         return jsonify({'error': 'Failed to load users.'}), 500
 
 
-# GET /api/admin/users/<id>
+# Get user details
 @admin_bp.route('/users/<int:user_id>', methods=['GET'])
 @require_auth
 @admin_only
@@ -129,7 +118,7 @@ def get_user_detail(user_id):
         return jsonify({'error': 'Failed to load user details.'}), 500
 
 
-# GET /api/admin/modules
+# Get modules
 @admin_bp.route('/modules', methods=['GET'])
 @require_auth
 @admin_only
@@ -143,7 +132,7 @@ def get_modules():
         return jsonify({'error': 'Failed to load modules.'}), 500
 
 
-# POST /api/admin/modules
+# Create module
 @admin_bp.route('/modules', methods=['POST'])
 @require_auth
 @admin_only
@@ -177,7 +166,7 @@ def create_module():
         return jsonify({'error': 'Failed to create module.'}), 500
 
 
-# PUT /api/admin/modules/<id>
+# Update module
 @admin_bp.route('/modules/<int:module_id>', methods=['PUT'])
 @require_auth
 @admin_only
@@ -216,7 +205,7 @@ def update_module(module_id):
         return jsonify({'error': 'Failed to update module.'}), 500
 
 
-# DELETE /api/admin/modules/<id>
+# Delete module
 @admin_bp.route('/modules/<int:module_id>', methods=['DELETE'])
 @require_auth
 @admin_only
@@ -232,7 +221,7 @@ def delete_module(module_id):
 
 # ── Lesson endpoints ──────────────────────────────────────────────────────────
 
-# GET /api/admin/modules/<id>/lessons
+# Get lessons
 @admin_bp.route('/modules/<int:module_id>/lessons', methods=['GET'])
 @require_auth
 @admin_only
@@ -255,7 +244,7 @@ def get_lessons(module_id):
         return jsonify({'error': 'Failed to load lessons.'}), 500
 
 
-# POST /api/admin/modules/<id>/lessons
+# Add lesson
 @admin_bp.route('/modules/<int:module_id>/lessons', methods=['POST'])
 @require_auth
 @admin_only
@@ -300,7 +289,7 @@ def add_lesson(module_id):
         return jsonify({'error': 'Failed to add lesson.'}), 500
 
 
-# PUT /api/admin/modules/<id>/lessons/<lid>
+# Update lesson
 @admin_bp.route('/modules/<int:module_id>/lessons/<int:lesson_id>', methods=['PUT'])
 @require_auth
 @admin_only
@@ -340,7 +329,7 @@ def update_lesson(module_id, lesson_id):
         return jsonify({'error': 'Failed to update lesson.'}), 500
 
 
-# DELETE /api/admin/modules/<id>/lessons/<lid>
+# Delete lesson
 @admin_bp.route('/modules/<int:module_id>/lessons/<int:lesson_id>', methods=['DELETE'])
 @require_auth
 @admin_only
