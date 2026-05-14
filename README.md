@@ -1,4 +1,4 @@
-# 🌱 AgriGrow — Smart Farming Learning Platform
+#  AgriGrow — Smart Farming Learning Platform
 
 **AgriGrow** is a full-stack web application that empowers farmers with structured agricultural education, practice tracking, community engagement, and a competitive leaderboard — all in one place.
 
@@ -8,12 +8,12 @@
 
 | Feature | Description |
 |---|---|
-| 🔐 Authentication | Secure JWT-based registration & login |
-| 📚 Learning Modules | Curated farming lessons with progress tracking |
-| ✅ Practice Tracker | Log daily farming practices and earn points |
-| 🏆 Leaderboard | Compete with other farmers in your region |
-| 💬 Community | Post questions, share tips, and like others' posts |
-| 🛡️ Admin Panel | Manage users, modules, and view platform statistics |
+| Authentication | Secure JWT-based registration & login |
+| Learning Modules | Curated farming lessons with progress tracking |
+| Practice Tracker | Log daily farming practices and earn points |
+| Leaderboard | Compete with other farmers in your region |
+| Community | Post questions, share tips, and like others' posts |
+| Admin Panel | Manage users, modules, and view platform statistics |
 
 ---
 
