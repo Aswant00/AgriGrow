@@ -78,7 +78,8 @@ def server_error(e):
 if __name__ == '__main__':
     PORT = int(os.getenv('PORT', 5000))
     print()
-    print('🌱 AgriGrow Flask Backend running!')
-    print(f'   Health: http://localhost:{PORT}/api/health')
+    print('\033[92m🌱 AgriGrow Flask Backend running!\033[0m')
+    print(f'   Website : http://localhost:{PORT}')
+    print(f'   Health  : http://localhost:{PORT}/api/health')
     print()
-    app.run(host='0.0.0.0', port=PORT, debug=True)
+    app.run(host='0.0.0.0', port=PORT, debug=True, use_reloader=False)
